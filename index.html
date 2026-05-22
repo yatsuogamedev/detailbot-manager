@@ -573,6 +573,7 @@ async function init() {
   const idToSend   = telegramId ? String(telegramId) : null;
   if (!idToSend) { showAuthError(); return; }
 
+  // ── Авторизация — отдельный try/catch, ошибка → экран "нет доступа"
   try {
     const authRes = await apiFetch(API.auth, {
       telegram_id: idToSend,
@@ -585,17 +586,19 @@ async function init() {
 
     document.getElementById('biz-name').textContent    = bizName;
     document.getElementById('header-date').textContent = formatDate(new Date());
-
-    await loadBookings();
-    hide('loader');
-    show('app');
-    showScreen('bookings');
-    setInterval(() => loadBookings(), 30000);
-
   } catch (e) {
-    console.error(e);
+    console.error('auth error:', e);
     showAuthError();
+    return;
   }
+
+  // ── Показываем приложение и грузим заявки отдельно
+  // (ошибка загрузки заявок НЕ должна вызывать экран "нет доступа")
+  hide('loader');
+  show('app');
+  showScreen('bookings');
+  setInterval(() => loadBookings(), 30000);
+  loadBookings();
 }
 
 // ================================================================
@@ -608,14 +611,25 @@ async function apiFetch(url, body) {
     body: JSON.stringify(body),
   });
   if (!res.ok) return { ok: false };
-  const data = await res.json();
-  return { ok: true, ...data };
+  try {
+    const data = await res.json();
+    return { ok: true, ...data };
+  } catch {
+    // пустой или невалидный JSON от сервера — не крашим
+    return { ok: false };
+  }
 }
 
 async function loadBookings() {
   showSkeleton();
-  const res = await apiFetch(API.list, { business_id: businessId });
-  if (res.ok && Array.isArray(res.bookings)) bookings = res.bookings;
+  try {
+    const res = await apiFetch(API.list, { business_id: businessId });
+    if (res.ok && Array.isArray(res.bookings)) bookings = res.bookings;
+    else bookings = [];
+  } catch (e) {
+    console.error('loadBookings error:', e);
+    bookings = [];
+  }
   renderAll();
 }
 
@@ -905,8 +919,12 @@ function openCall(name, phone) {
 
 function doCall() {
   if (!currentCallPhone) return;
-  if (tg) tg.openLink('tel:' + currentCallPhone);
-  else window.location.href = 'tel:' + currentCallPhone;
+  // tg.openLink не поддерживает tel: — используем anchor click
+  const a = document.createElement('a');
+  a.href = 'tel:' + currentCallPhone;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
 }
 
 function closeCall(e) {
