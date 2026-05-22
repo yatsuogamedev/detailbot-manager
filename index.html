@@ -336,9 +336,12 @@ async function init() {
   const devMode = !tg?.initDataUnsafe?.user;
   if (devMode) console.warn('[TMA] Dev mode — Telegram user not found, using test ID');
 
+  const idToSend = telegramId ? String(telegramId) : 'DEV_TEST';
+  alert('DEBUG: telegram_id = ' + idToSend + '\nuser obj = ' + JSON.stringify(tg?.initDataUnsafe?.user));
+
   try {
     const authRes = await apiFetch(API.auth, {
-      telegram_id: telegramId || 'DEV_TEST',
+      telegram_id: idToSend,
       init_data: tg?.initData || '',
     });
 
