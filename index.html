@@ -287,7 +287,7 @@
     <div class="sheet-hint">Клиент DetailBot</div>
     <div class="sheet-name"  id="call-name">—</div>
     <div class="sheet-phone" id="call-phone">—</div>
-    <a  class="sheet-call"  id="call-link"  href="#">Позвонить</a>
+    <button class="sheet-call" id="call-link" onclick="doCall()">Позвонить</button>
     <button class="sheet-cancel" onclick="document.getElementById('call-backdrop').classList.remove('show')">Отменить</button>
   </div>
 </div>
@@ -461,7 +461,7 @@ function cardHTML(b) {
       <span class="card-name">${b.client_name || b.name || '—'}</span>
       <span class="badge ${s.badge}">${s.label}</span>
     </div>
-    <div class="card-car">${b.car_model || '—'}${b.channel ? ' · ' + b.channel : ''}</div>
+    <div class="card-car">${b.car_model || '—'}</div>
     <div class="card-meta">
       <span class="card-service">${b.service || '—'}</span>
       <span class="card-time">${b.preferred_time || b.created_at?.slice(0,10) || '—'}</span>
@@ -483,12 +483,24 @@ function setTab(el) {
 // ================================================================
 // CALL SHEET
 // ================================================================
+let currentCallPhone = '';
+
 function openCall(name, phone) {
+  currentCallPhone = phone.replace(/[^+\d]/g, '');
   document.getElementById('call-name').textContent  = name;
   document.getElementById('call-phone').textContent = phone;
-  document.getElementById('call-link').href = 'tel:' + phone.replace(/[^+\d]/g,'');
   document.getElementById('call-backdrop').classList.add('show');
   if (tg) tg.HapticFeedback?.impactOccurred('light');
+}
+
+function doCall() {
+  if (!currentCallPhone) return;
+  // В TMA открываем звонок через нативный способ
+  if (tg) {
+    tg.openLink('tel:' + currentCallPhone);
+  } else {
+    window.location.href = 'tel:' + currentCallPhone;
+  }
 }
 
 function closeCall(e) {
