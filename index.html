@@ -441,16 +441,17 @@ function cardHTML(b) {
   const nameSafe  = (b.client_name || b.name || '—').replace(/'/g, "\\'");
 
   let btns = '';
+  const bid = b.booking_id || b.id;
   if (b.status === 'created') {
     btns = `
-      <button class="cbtn cbtn--yes"  onclick="confirmAction('${b.id}','confirmed','Записать клиента?','${nameSafe} · ${b.service || ''}')">✓ Записать</button>
+      <button class="cbtn cbtn--yes"  onclick="confirmAction('${bid}','confirmed','Записать клиента?','${nameSafe} · ${b.service || ''}')">✓ Записать</button>
       <button class="cbtn cbtn--call" onclick="openCall('${nameSafe}','${phoneSafe}')">📞 Позвонить</button>
-      <button class="cbtn cbtn--no"   onclick="confirmAction('${b.id}','rejected','Отказать клиенту?','${nameSafe}')">✕ Отказать</button>`;
+      <button class="cbtn cbtn--no"   onclick="confirmAction('${bid}','rejected','Отказать клиенту?','${nameSafe}')">✕ Отказать</button>`;
   } else if (b.status === 'confirmed') {
     btns = `
-      <button class="cbtn cbtn--done" onclick="confirmAction('${b.id}','served','Отметить как обслужен?','${nameSafe}')">✓ Обслужен</button>
+      <button class="cbtn cbtn--done" onclick="confirmAction('${bid}','served','Отметить как обслужен?','${nameSafe}')">✓ Обслужен</button>
       <button class="cbtn cbtn--call" onclick="openCall('${nameSafe}','${phoneSafe}')">📞 Позвонить</button>
-      <button class="cbtn cbtn--no"   onclick="confirmAction('${b.id}','rejected','Клиент не пришёл?','${nameSafe}')">✕ Не пришёл</button>`;
+      <button class="cbtn cbtn--no"   onclick="confirmAction('${bid}','rejected','Клиент не пришёл?','${nameSafe}')">✕ Не пришёл</button>`;
   } else {
     btns = `<button class="cbtn cbtn--call" onclick="openCall('${nameSafe}','${phoneSafe}')">📞 Позвонить</button>`;
   }
