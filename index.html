@@ -7,17 +7,17 @@
   <script src="https://telegram.org/js/telegram-web-app.js"></script>
   <style>
     :root {
-      --bg:      #0f0f0f;
-      --bg2:     #1a1a1a;
-      --bg3:     #242424;
-      --border:  rgba(255,255,255,.08);
-      --text:    #ffffff;
-      --text2:   rgba(255,255,255,.55);
-      --text3:   rgba(255,255,255,.30);
-      --amber:   #f5a623;
-      --blue:    #60a5fa;
-      --green:   #4ade80;
-      --red:     #f87171;
+      --bg:       #0f0f0f;
+      --bg2:      #1a1a1a;
+      --bg3:      #242424;
+      --border:   rgba(255,255,255,.08);
+      --text:     #ffffff;
+      --text2:    rgba(255,255,255,.55);
+      --text3:    rgba(255,255,255,.30);
+      --amber:    #f5a623;
+      --blue:     #60a5fa;
+      --green:    #4ade80;
+      --red:      #f87171;
       --amber-bg: rgba(245,166,35,.14);
       --blue-bg:  rgba(96,165,250,.13);
       --green-bg: rgba(74,222,128,.12);
@@ -30,6 +30,7 @@
       color: var(--text);
       min-height: 100vh;
       overflow-x: hidden;
+      padding-bottom: 64px;
     }
 
     /* ── LOADER ── */
@@ -64,8 +65,8 @@
       flex-direction: column; gap: 12px; text-align: center; padding: 32px;
     }
     #auth-error .ico { font-size: 48px; }
-    #auth-error h2 { font-size: 18px; }
-    #auth-error p { color: var(--text2); font-size: 14px; line-height: 1.6; }
+    #auth-error h2   { font-size: 18px; }
+    #auth-error p    { color: var(--text2); font-size: 14px; line-height: 1.6; }
 
     /* ── HEADER ── */
     .header {
@@ -79,9 +80,7 @@
       justify-content: space-between; margin-bottom: 10px;
     }
     .biz-name { font-size: 15px; font-weight: 600; }
-    .header-right {
-      display: flex; align-items: center; gap: 8px;
-    }
+    .header-right { display: flex; align-items: center; gap: 8px; }
     .date { font-size: 11px; color: var(--text3); }
     .refresh-btn {
       background: none; border: none; cursor: pointer;
@@ -99,18 +98,17 @@
     }
     .stat-num { font-size: 20px; font-weight: 600; line-height: 1; }
     .stat-lbl { font-size: 10px; color: var(--text3); margin-top: 3px; }
-    .stat-sub { font-size: 9px; color: var(--text3); margin-top: 1px; }
+    .stat-sub { font-size: 9px;  color: var(--text3); margin-top: 1px; }
     .stat--amber .stat-num { color: var(--amber); }
     .stat--blue  .stat-num { color: var(--blue); }
     .stat--green .stat-num { color: var(--green); }
 
-    /* ── TABS ── */
+    /* ── TABS (внутри экрана заявок) ── */
     .tabs {
       display: flex;
       background: var(--bg);
       border-bottom: 0.5px solid var(--border);
-      overflow-x: auto;
-      scrollbar-width: none;
+      overflow-x: auto; scrollbar-width: none;
     }
     .tabs::-webkit-scrollbar { display: none; }
     .tab {
@@ -130,19 +128,13 @@
 
     /* ── LIST ── */
     .list { padding: 10px 12px; display: flex; flex-direction: column; gap: 8px; }
-
-    .empty {
-      text-align: center; padding: 48px 24px;
-      color: var(--text3); font-size: 14px;
-    }
+    .empty { text-align: center; padding: 48px 24px; color: var(--text3); font-size: 14px; }
     .empty-ico { font-size: 36px; margin-bottom: 12px; }
 
     /* ── CARD ── */
     .card {
       background: var(--bg2); border-radius: 12px;
-      padding: 13px 14px;
-      border: 0.5px solid var(--border);
-      transition: border-color .2s;
+      padding: 13px 14px; border: 0.5px solid var(--border);
     }
     .card-top {
       display: flex; align-items: center;
@@ -158,32 +150,23 @@
     .badge--done   { background: var(--green-bg); color: var(--green); }
     .badge--reject { background: var(--red-bg);   color: var(--red); }
 
-    .card-car {
-      font-size: 11px; color: var(--text2); margin-bottom: 6px;
-    }
+    .card-car  { font-size: 11px; color: var(--text2); margin-bottom: 6px; }
     .card-meta {
       display: flex; align-items: center;
       justify-content: space-between; margin-bottom: 10px;
     }
     .card-service { font-size: 12px; color: var(--text2); }
     .card-time    { font-size: 11px; color: var(--text3); }
-
-    /* ── WISH BLOCK ── */
     .card-wish {
       font-size: 12px; color: var(--text2);
       background: var(--bg3); border-radius: 6px;
-      padding: 6px 10px; margin-bottom: 10px;
-      line-height: 1.5;
+      padding: 6px 10px; margin-bottom: 10px; line-height: 1.5;
     }
-
     .card-btns { display: flex; gap: 6px; }
     .cbtn {
-      flex: 1; padding: 10px 6px;
-      border-radius: 8px; min-height: 40px;
-      font-size: 12px; font-weight: 600;
-      text-align: center; cursor: pointer;
-      border: none; outline: none;
-      transition: opacity .15s, transform .1s;
+      flex: 1; padding: 10px 6px; border-radius: 8px; min-height: 40px;
+      font-size: 12px; font-weight: 600; text-align: center; cursor: pointer;
+      border: none; outline: none; transition: opacity .15s, transform .1s;
       font-family: inherit;
     }
     .cbtn:active { opacity: .75; transform: scale(.97); }
@@ -193,25 +176,137 @@
     .cbtn--no   { background: var(--red-bg);   color: var(--red); }
 
     /* ── SKELETON ── */
-    @keyframes shimmer {
-      0%   { opacity: .4; }
-      50%  { opacity: .8; }
-      100% { opacity: .4; }
-    }
+    @keyframes shimmer { 0%{opacity:.4} 50%{opacity:.8} 100%{opacity:.4} }
     .skeleton-card {
       background: var(--bg2); border-radius: 12px;
       padding: 13px 14px; border: 0.5px solid var(--border);
       animation: shimmer 1.4s ease-in-out infinite;
     }
-    .skel-line {
-      background: var(--bg3); border-radius: 4px; margin-bottom: 8px;
-    }
-    .skel-line--title  { height: 14px; width: 55%; }
-    .skel-line--sub    { height: 11px; width: 35%; margin-bottom: 12px; }
-    .skel-line--meta   { height: 11px; width: 45%; }
-    .skel-line--meta2  { height: 11px; width: 25%; margin-bottom: 14px; }
+    .skel-line { background: var(--bg3); border-radius: 4px; margin-bottom: 8px; }
+    .skel-line--title { height: 14px; width: 55%; }
+    .skel-line--sub   { height: 11px; width: 35%; margin-bottom: 12px; }
+    .skel-line--meta  { height: 11px; width: 45%; }
+    .skel-line--meta2 { height: 11px; width: 25%; margin-bottom: 14px; }
     .skel-btns { display: flex; gap: 6px; }
     .skel-btn  { flex: 1; height: 40px; background: var(--bg3); border-radius: 8px; }
+
+    /* ── NAV BAR ── */
+    .nav-bar {
+      position: fixed; bottom: 0; left: 0; right: 0;
+      height: 56px;
+      background: var(--bg2);
+      border-top: 0.5px solid var(--border);
+      display: flex;
+      padding-bottom: env(safe-area-inset-bottom);
+      z-index: 100;
+    }
+    .nav-btn {
+      flex: 1; display: flex; flex-direction: column;
+      align-items: center; justify-content: center;
+      gap: 3px; font-size: 10px; color: var(--text3);
+      cursor: pointer; transition: color .15s;
+      user-select: none;
+    }
+    .nav-btn.active { color: var(--amber); }
+    .nav-btn .nav-ico { font-size: 20px; line-height: 1; }
+
+    /* ── ANALYTICS SCREEN ── */
+    .screen-inner { padding: 14px 12px; }
+    .screen-title {
+      font-size: 17px; font-weight: 700; margin-bottom: 16px;
+    }
+
+    .period-row {
+      display: flex; gap: 6px; margin-bottom: 18px;
+    }
+    .period-btn {
+      flex: 1; padding: 8px 6px; border-radius: 8px;
+      font-size: 12px; font-weight: 600; text-align: center;
+      cursor: pointer; border: none; font-family: inherit;
+      background: var(--bg2); color: var(--text3);
+      transition: background .15s, color .15s;
+    }
+    .period-btn.active {
+      background: var(--amber-bg); color: var(--amber);
+    }
+
+    .analytics-stats {
+      display: grid; grid-template-columns: repeat(3,1fr); gap: 8px;
+      margin-bottom: 16px;
+    }
+    .a-stat {
+      background: var(--bg2); border-radius: 10px;
+      padding: 12px 8px; text-align: center;
+      border: 0.5px solid var(--border);
+    }
+    .a-stat-num { font-size: 26px; font-weight: 700; line-height: 1; margin-bottom: 4px; }
+    .a-stat-lbl { font-size: 10px; color: var(--text3); line-height: 1.3; }
+    .a-stat--amber .a-stat-num { color: var(--amber); }
+    .a-stat--blue  .a-stat-num { color: var(--blue); }
+    .a-stat--green .a-stat-num { color: var(--green); }
+
+    .analytics-block {
+      background: var(--bg2); border-radius: 12px;
+      padding: 14px; border: 0.5px solid var(--border);
+      margin-bottom: 12px;
+    }
+    .analytics-block-title {
+      font-size: 11px; color: var(--text3);
+      text-transform: uppercase; letter-spacing: .08em;
+      margin-bottom: 12px;
+    }
+
+    .conversion-row {
+      display: flex; align-items: baseline; gap: 8px;
+    }
+    .conversion-pct {
+      font-size: 40px; font-weight: 700; color: var(--green); line-height: 1;
+    }
+    .conversion-lbl { font-size: 13px; color: var(--text2); }
+
+    .service-row { margin-bottom: 10px; }
+    .service-row:last-child { margin-bottom: 0; }
+    .service-row-top {
+      display: flex; justify-content: space-between;
+      font-size: 13px; margin-bottom: 5px;
+    }
+    .service-row-name { color: var(--text); }
+    .service-row-cnt  { color: var(--text3); font-size: 12px; }
+    .service-bar-bg {
+      height: 4px; background: var(--bg3); border-radius: 2px; overflow: hidden;
+    }
+    .service-bar-fill {
+      height: 100%; background: var(--amber); border-radius: 2px;
+      transition: width .3s ease;
+    }
+
+    /* ── SETTINGS SCREEN ── */
+    .settings-section { margin-bottom: 20px; }
+    .settings-title {
+      font-size: 11px; color: var(--text3);
+      text-transform: uppercase; letter-spacing: .08em;
+      margin-bottom: 8px; padding: 0 4px;
+    }
+    .settings-row {
+      background: var(--bg2); border-radius: 10px;
+      padding: 13px 14px;
+      display: flex; justify-content: space-between; align-items: center;
+      border: 0.5px solid var(--border);
+      margin-bottom: 1px; font-size: 14px;
+    }
+    .settings-row-val { color: var(--text2); font-size: 13px; max-width: 55%; text-align: right; word-break: break-all; }
+    .settings-btn {
+      width: 100%; padding: 13px; border-radius: 10px;
+      background: var(--bg2); border: 0.5px solid var(--border);
+      color: var(--text); font-size: 14px; font-weight: 600;
+      text-align: left; cursor: pointer; font-family: inherit;
+      display: flex; align-items: center; gap: 10px;
+      margin-bottom: 1px;
+    }
+    .settings-btn:active { opacity: .7; }
+    .settings-btn-hint {
+      font-size: 11px; color: var(--text3); padding: 6px 4px 0;
+    }
 
     /* ── CALL SHEET ── */
     .sheet-backdrop {
@@ -224,30 +319,22 @@
       background: #1c1c1e; border-radius: 14px 14px 0 0;
       width: 100%; padding: 20px 16px;
       padding-bottom: max(28px, env(safe-area-inset-bottom));
-      text-align: center;
-      animation: slideUp .25s ease;
+      text-align: center; animation: slideUp .25s ease;
     }
-    @keyframes slideUp {
-      from { transform: translateY(100%); }
-      to   { transform: translateY(0); }
-    }
+    @keyframes slideUp { from{transform:translateY(100%)} to{transform:translateY(0)} }
     .sheet-hint   { color: var(--text3); font-size: 12px; margin-bottom: 4px; }
     .sheet-name   { font-size: 20px; font-weight: 600; margin-bottom: 4px; }
     .sheet-phone  { color: var(--blue); font-size: 15px; margin-bottom: 24px; }
     .sheet-call {
-      display: block; width: 100%;
-      background: #30d158; color: #fff;
-      border: none; border-radius: 100px;
-      padding: 15px; font-size: 17px; font-weight: 600;
-      cursor: pointer; margin-bottom: 10px;
-      font-family: inherit; text-decoration: none;
+      display: block; width: 100%; background: #30d158; color: #fff;
+      border: none; border-radius: 100px; padding: 15px;
+      font-size: 17px; font-weight: 600; cursor: pointer; margin-bottom: 10px;
+      font-family: inherit;
     }
     .sheet-cancel {
-      display: block; width: 100%;
-      background: #2c2c2e; color: var(--text);
-      border: none; border-radius: 100px;
-      padding: 15px; font-size: 17px;
-      cursor: pointer; font-family: inherit;
+      display: block; width: 100%; background: #2c2c2e; color: var(--text);
+      border: none; border-radius: 100px; padding: 15px;
+      font-size: 17px; cursor: pointer; font-family: inherit;
     }
 
     /* ── CONFIRM MODAL ── */
@@ -259,8 +346,7 @@
     .confirm-backdrop.show { display: flex; }
     .confirm-box {
       background: #1c1c1e; border-radius: 14px;
-      padding: 20px; width: 100%; max-width: 320px;
-      text-align: center;
+      padding: 20px; width: 100%; max-width: 320px; text-align: center;
     }
     .confirm-title { font-size: 16px; font-weight: 600; margin-bottom: 8px; }
     .confirm-sub   { font-size: 13px; color: var(--text2); margin-bottom: 20px; line-height: 1.5; }
@@ -290,9 +376,10 @@
   <p>Ваш аккаунт не привязан ни к одному бизнесу в DetailBot.<br>Обратитесь к администратору.</p>
 </div>
 
-<!-- MAIN APP (hidden until auth) -->
+<!-- MAIN APP -->
 <div id="app" style="display:none">
 
+  <!-- ХЕДЕР (общий для всех экранов) -->
   <div class="header">
     <div class="header-top">
       <span class="biz-name" id="biz-name">—</span>
@@ -320,14 +407,110 @@
     </div>
   </div>
 
-  <div class="tabs">
-    <div class="tab active" data-filter="all"   onclick="setTab(this)">Все</div>
-    <div class="tab"        data-filter="wait"  onclick="setTab(this)">Ожидают</div>
-    <div class="tab"        data-filter="work"  onclick="setTab(this)">В работе</div>
-    <div class="tab"        data-filter="done"  onclick="setTab(this)">Готово</div>
+  <!-- ЭКРАН 1 — ЗАЯВКИ -->
+  <div id="screen-bookings">
+    <div class="tabs">
+      <div class="tab active" data-filter="all"  onclick="setTab(this)">Все</div>
+      <div class="tab" data-filter="wait"        onclick="setTab(this)">Ожидают</div>
+      <div class="tab" data-filter="work"        onclick="setTab(this)">В работе</div>
+      <div class="tab" data-filter="done"        onclick="setTab(this)">Готово</div>
+    </div>
+    <div class="list" id="list"></div>
   </div>
 
-  <div class="list" id="list"></div>
+  <!-- ЭКРАН 2 — АНАЛИТИКА -->
+  <div id="screen-analytics" style="display:none">
+    <div class="screen-inner">
+      <div class="screen-title">Аналитика</div>
+
+      <div class="period-row">
+        <button class="period-btn active" data-period="day"   onclick="setPeriod(this)">Сегодня</button>
+        <button class="period-btn"        data-period="week"  onclick="setPeriod(this)">Неделя</button>
+        <button class="period-btn"        data-period="month" onclick="setPeriod(this)">Месяц</button>
+      </div>
+
+      <div class="analytics-stats">
+        <div class="a-stat a-stat--amber">
+          <div class="a-stat-num" id="a-created">0</div>
+          <div class="a-stat-lbl">Создано заявок</div>
+        </div>
+        <div class="a-stat a-stat--blue">
+          <div class="a-stat-num" id="a-confirmed">0</div>
+          <div class="a-stat-lbl">Записано</div>
+        </div>
+        <div class="a-stat a-stat--green">
+          <div class="a-stat-num" id="a-served">0</div>
+          <div class="a-stat-lbl">Обслужено</div>
+        </div>
+      </div>
+
+      <div class="analytics-block">
+        <div class="analytics-block-title">Конверсия в визит</div>
+        <div class="conversion-row">
+          <div class="conversion-pct" id="a-conv">—</div>
+          <div class="conversion-lbl">из созданных заявок<br>дошли до визита</div>
+        </div>
+      </div>
+
+      <div class="analytics-block">
+        <div class="analytics-block-title">Популярные услуги</div>
+        <div id="a-services">
+          <div style="color:var(--text3);font-size:13px">Нет данных за период</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ЭКРАН 3 — НАСТРОЙКИ -->
+  <div id="screen-settings" style="display:none">
+    <div class="screen-inner">
+      <div class="screen-title">Настройки</div>
+
+      <div class="settings-section">
+        <div class="settings-title">О бизнесе</div>
+        <div class="settings-row">
+          <span>Название</span>
+          <span class="settings-row-val" id="s-biz-name">—</span>
+        </div>
+        <div class="settings-row" onclick="copyBizId()" style="cursor:pointer">
+          <span>ID бизнеса</span>
+          <span class="settings-row-val" id="s-biz-id" style="font-size:11px">—</span>
+        </div>
+      </div>
+
+      <div class="settings-section">
+        <div class="settings-title">Прайс-лист</div>
+        <button class="settings-btn" id="price-btn" onclick="openPriceTable()">
+          📄 Открыть таблицу
+        </button>
+        <div class="settings-btn-hint" id="price-hint" style="display:none">Ссылка не настроена</div>
+      </div>
+
+      <div class="settings-section">
+        <div class="settings-title">Поддержка</div>
+        <button class="settings-btn" onclick="openSupport()">
+          💬 Написать в AutoShift
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- NAV BAR -->
+  <nav class="nav-bar">
+    <div class="nav-btn active" data-screen="bookings" onclick="showScreen('bookings')">
+      <span class="nav-ico">📋</span>
+      <span>Заявки</span>
+    </div>
+    <div class="nav-btn" data-screen="analytics" onclick="showScreen('analytics')">
+      <span class="nav-ico">📊</span>
+      <span>Аналитика</span>
+    </div>
+    <div class="nav-btn" data-screen="settings" onclick="showScreen('settings')">
+      <span class="nav-ico">⚙️</span>
+      <span>Настройки</span>
+    </div>
+  </nav>
+
 </div>
 
 <!-- CALL SHEET -->
@@ -336,7 +519,7 @@
     <div class="sheet-hint">Клиент DetailBot</div>
     <div class="sheet-name"  id="call-name">—</div>
     <div class="sheet-phone" id="call-phone">—</div>
-    <button class="sheet-call" id="call-link" onclick="doCall()">Позвонить</button>
+    <button class="sheet-call" onclick="doCall()">Позвонить</button>
     <button class="sheet-cancel" onclick="document.getElementById('call-backdrop').classList.remove('show')">Отменить</button>
   </div>
 </div>
@@ -363,25 +546,31 @@ const API = {
   update: 'https://mokokagrielif.beget.app/webhook/manager/update',
 };
 
+// вставьте ссылку на Google Таблицу с прайсом
+const PRICE_TABLE_URL = '';
+
 // ================================================================
 // STATE
 // ================================================================
-let bookings     = [];
-let businessId   = null;
-let bizName      = '';
-let activeFilter = 'all';
+let bookings      = [];
+let businessId    = null;
+let bizName       = '';
+let activeFilter  = 'all';
+let activePeriod  = 'day';
 let pendingAction = null;
 
 // ================================================================
-// INIT
+// TG INIT
 // ================================================================
 const tg = window.Telegram?.WebApp;
 if (tg) { tg.ready(); tg.expand(); }
 
+// ================================================================
+// INIT
+// ================================================================
 async function init() {
   const telegramId = tg?.initDataUnsafe?.user?.id || null;
   const idToSend   = telegramId ? String(telegramId) : null;
-
   if (!idToSend) { showAuthError(); return; }
 
   try {
@@ -389,19 +578,18 @@ async function init() {
       telegram_id: idToSend,
       init_data:   tg?.initData || '',
     });
-
     if (!authRes.ok) { showAuthError(); return; }
 
     businessId = authRes.business_id;
     bizName    = authRes.display_name || 'Бизнес';
-    document.getElementById('biz-name').textContent  = bizName;
+
+    document.getElementById('biz-name').textContent    = bizName;
     document.getElementById('header-date').textContent = formatDate(new Date());
 
     await loadBookings();
     hide('loader');
     show('app');
-
-    // Авто-обновление каждые 30 секунд
+    showScreen('bookings');
     setInterval(() => loadBookings(), 30000);
 
   } catch (e) {
@@ -427,9 +615,7 @@ async function apiFetch(url, body) {
 async function loadBookings() {
   showSkeleton();
   const res = await apiFetch(API.list, { business_id: businessId });
-  if (res.ok && Array.isArray(res.bookings)) {
-    bookings = res.bookings;
-  }
+  if (res.ok && Array.isArray(res.bookings)) bookings = res.bookings;
   renderAll();
 }
 
@@ -446,6 +632,21 @@ async function doUpdate(bookingId, newStatus) {
 }
 
 // ================================================================
+// NAVIGATION
+// ================================================================
+function showScreen(name) {
+  ['bookings', 'analytics', 'settings'].forEach(s => {
+    document.getElementById('screen-' + s).style.display = s === name ? 'block' : 'none';
+  });
+  document.querySelectorAll('.nav-btn').forEach(b => {
+    b.classList.toggle('active', b.dataset.screen === name);
+  });
+  if (name === 'analytics') renderAnalytics();
+  if (name === 'settings')  renderSettings();
+  if (tg) tg.HapticFeedback?.selectionChanged?.();
+}
+
+// ================================================================
 // MANUAL REFRESH
 // ================================================================
 async function manualRefresh() {
@@ -456,7 +657,7 @@ async function manualRefresh() {
 }
 
 // ================================================================
-// RENDER
+// RENDER — BOOKINGS
 // ================================================================
 const STATUS_MAP = {
   created:   { filter: 'wait', badge: 'badge--wait',   label: 'Ожидает записи' },
@@ -471,35 +672,27 @@ function renderAll() {
   renderList();
 }
 
-// Считаем только заявки за сегодня
 function updateStats() {
-  const today = new Date().toISOString().slice(0, 10);
+  const today  = new Date().toISOString().slice(0, 10);
   const todayB = bookings.filter(b => (b.created_at || '').slice(0, 10) === today);
-
-  const w = todayB.filter(b => b.status === 'created').length;
-  const r = todayB.filter(b => b.status === 'confirmed').length;
-  const d = todayB.filter(b => b.status === 'served').length;
-
-  document.getElementById('cnt-wait').textContent = w;
-  document.getElementById('cnt-work').textContent = r;
-  document.getElementById('cnt-done').textContent = d;
+  document.getElementById('cnt-wait').textContent = todayB.filter(b => b.status === 'created').length;
+  document.getElementById('cnt-work').textContent = todayB.filter(b => b.status === 'confirmed').length;
+  document.getElementById('cnt-done').textContent = todayB.filter(b => b.status === 'served').length;
 }
 
-// Счётчики на табах
 function updateTabCounts() {
   const total = bookings.length;
   const wait  = bookings.filter(b => b.status === 'created').length;
   const work  = bookings.filter(b => b.status === 'confirmed').length;
   const done  = bookings.filter(b => b.status === 'served' || b.status === 'rejected').length;
-
-  document.querySelector('[data-filter="all"]').textContent   = `Все (${total})`;
-  document.querySelector('[data-filter="wait"]').textContent  = `Ожидают (${wait})`;
-  document.querySelector('[data-filter="work"]').textContent  = `В работе (${work})`;
-  document.querySelector('[data-filter="done"]').textContent  = `Готово (${done})`;
+  document.querySelector('[data-filter="all"]').textContent  = `Все (${total})`;
+  document.querySelector('[data-filter="wait"]').textContent = `Ожидают (${wait})`;
+  document.querySelector('[data-filter="work"]').textContent = `В работе (${work})`;
+  document.querySelector('[data-filter="done"]').textContent = `Готово (${done})`;
 }
 
 function renderList() {
-  const list = document.getElementById('list');
+  const list     = document.getElementById('list');
   const filtered = activeFilter === 'all'
     ? bookings
     : bookings.filter(b => (STATUS_MAP[b.status]?.filter || 'done') === activeFilter);
@@ -508,18 +701,16 @@ function renderList() {
     list.innerHTML = `<div class="empty"><div class="empty-ico">📋</div>Заявок нет</div>`;
     return;
   }
-
   list.innerHTML = filtered.map(b => cardHTML(b)).join('');
 }
 
 function cardHTML(b) {
-  const s        = STATUS_MAP[b.status] || STATUS_MAP.created;
-  const phone    = b.phone || b.client_phone || '';
+  const s         = STATUS_MAP[b.status] || STATUS_MAP.created;
+  const phone     = b.phone || b.client_phone || '';
   const phoneSafe = phone.replace(/'/g, "\\'");
   const nameSafe  = (b.client_name || b.name || '—').replace(/'/g, "\\'");
   const bid       = b.booking_id || b.id;
 
-  // Кнопки действий
   let btns = '';
   if (b.status === 'created') {
     btns = `
@@ -532,15 +723,11 @@ function cardHTML(b) {
       <button class="cbtn cbtn--call" onclick="openCall('${nameSafe}','${phoneSafe}')">📞 Позвонить</button>
       <button class="cbtn cbtn--no"   onclick="confirmAction('${bid}','rejected','Клиент не пришёл?','${nameSafe}')">✕ Не пришёл</button>`;
   } else {
-    // served / rejected — только звонок
     btns = `<button class="cbtn cbtn--call" onclick="openCall('${nameSafe}','${phoneSafe}')">📞 Позвонить</button>`;
   }
 
-  // Пожелание клиента
-  const wishText = b.wish || b.notes || b.problem_or_wish || '';
-  const wishBlock = wishText
-    ? `<div class="card-wish">💬 ${wishText}</div>`
-    : '';
+  const wishText  = b.wish || b.notes || b.problem_or_wish || '';
+  const wishBlock = wishText ? `<div class="card-wish">💬 ${wishText}</div>` : '';
 
   return `<div class="card">
     <div class="card-top">
@@ -563,34 +750,144 @@ function cardHTML(b) {
 function showSkeleton() {
   const list = document.getElementById('list');
   if (!list) return;
-  const card = `
-    <div class="skeleton-card">
-      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
-        <div class="skel-line skel-line--title"></div>
-        <div class="skel-line" style="height:18px;width:80px;border-radius:100px"></div>
-      </div>
-      <div class="skel-line skel-line--sub"></div>
-      <div style="display:flex;justify-content:space-between;margin-bottom:14px">
-        <div class="skel-line skel-line--meta" style="margin-bottom:0"></div>
-        <div class="skel-line skel-line--meta2" style="margin-bottom:0"></div>
-      </div>
-      <div class="skel-btns">
-        <div class="skel-btn"></div>
-        <div class="skel-btn"></div>
-        <div class="skel-btn"></div>
-      </div>
-    </div>`;
+  const card = `<div class="skeleton-card">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+      <div class="skel-line skel-line--title"></div>
+      <div class="skel-line" style="height:18px;width:80px;border-radius:100px"></div>
+    </div>
+    <div class="skel-line skel-line--sub"></div>
+    <div style="display:flex;justify-content:space-between;margin-bottom:14px">
+      <div class="skel-line skel-line--meta" style="margin-bottom:0"></div>
+      <div class="skel-line skel-line--meta2" style="margin-bottom:0"></div>
+    </div>
+    <div class="skel-btns">
+      <div class="skel-btn"></div><div class="skel-btn"></div><div class="skel-btn"></div>
+    </div>
+  </div>`;
   list.innerHTML = card + card + card;
 }
 
 // ================================================================
-// TABS
+// TABS (внутри экрана заявок)
 // ================================================================
 function setTab(el) {
   document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
   el.classList.add('active');
   activeFilter = el.dataset.filter;
   renderList();
+}
+
+// ================================================================
+// ANALYTICS
+// ================================================================
+function setPeriod(el) {
+  document.querySelectorAll('.period-btn').forEach(b => b.classList.remove('active'));
+  el.classList.add('active');
+  activePeriod = el.dataset.period;
+  renderAnalytics();
+}
+
+function getDateRange(period) {
+  const now   = new Date();
+  const today = now.toISOString().slice(0, 10);
+  if (period === 'day') return { from: today, to: today };
+
+  if (period === 'week') {
+    const d = new Date(now);
+    d.setDate(d.getDate() - 6);
+    return { from: d.toISOString().slice(0, 10), to: today };
+  }
+  // month
+  const d = new Date(now);
+  d.setDate(d.getDate() - 29);
+  return { from: d.toISOString().slice(0, 10), to: today };
+}
+
+function filterByPeriod(arr, period) {
+  const { from, to } = getDateRange(period);
+  return arr.filter(b => {
+    const d = (b.created_at || '').slice(0, 10);
+    return d >= from && d <= to;
+  });
+}
+
+function renderAnalytics() {
+  const data      = filterByPeriod(bookings, activePeriod);
+  const created   = data.length;
+  const confirmed = data.filter(b => b.status === 'confirmed' || b.status === 'served').length;
+  const served    = data.filter(b => b.status === 'served').length;
+  const conv      = created > 0 ? Math.round(served / created * 100) : null;
+
+  document.getElementById('a-created').textContent   = created;
+  document.getElementById('a-confirmed').textContent = confirmed;
+  document.getElementById('a-served').textContent    = served;
+  document.getElementById('a-conv').textContent      = conv !== null ? conv + '%' : '—';
+
+  // Топ услуг
+  const svcMap = {};
+  data.forEach(b => {
+    const svc = (b.service || '').trim();
+    if (svc) svcMap[svc] = (svcMap[svc] || 0) + 1;
+  });
+  const sorted = Object.entries(svcMap).sort((a, b) => b[1] - a[1]).slice(0, 5);
+  const maxVal = sorted.length ? sorted[0][1] : 1;
+
+  const svcEl = document.getElementById('a-services');
+  if (!sorted.length) {
+    svcEl.innerHTML = '<div style="color:var(--text3);font-size:13px">Нет данных за период</div>';
+    return;
+  }
+  svcEl.innerHTML = sorted.map(([name, cnt]) => `
+    <div class="service-row">
+      <div class="service-row-top">
+        <span class="service-row-name">${name}</span>
+        <span class="service-row-cnt">${cnt}</span>
+      </div>
+      <div class="service-bar-bg">
+        <div class="service-bar-fill" style="width:${Math.round(cnt / maxVal * 100)}%"></div>
+      </div>
+    </div>`).join('');
+}
+
+// ================================================================
+// SETTINGS
+// ================================================================
+function renderSettings() {
+  document.getElementById('s-biz-name').textContent = bizName || '—';
+  document.getElementById('s-biz-id').textContent   = businessId || '—';
+
+  const btn  = document.getElementById('price-btn');
+  const hint = document.getElementById('price-hint');
+  if (!PRICE_TABLE_URL) {
+    btn.style.opacity       = '0.4';
+    btn.style.pointerEvents = 'none';
+    hint.style.display      = 'block';
+  } else {
+    btn.style.opacity       = '1';
+    btn.style.pointerEvents = 'auto';
+    hint.style.display      = 'none';
+  }
+}
+
+function copyBizId() {
+  if (!businessId) return;
+  navigator.clipboard?.writeText(businessId).then(() => {
+    const el = document.getElementById('s-biz-id');
+    const orig = el.textContent;
+    el.textContent = '✓ Скопировано';
+    setTimeout(() => { el.textContent = orig; }, 1500);
+  });
+}
+
+function openPriceTable() {
+  if (!PRICE_TABLE_URL) return;
+  if (tg) tg.openLink(PRICE_TABLE_URL);
+  else window.open(PRICE_TABLE_URL, '_blank');
+}
+
+function openSupport() {
+  if (tg) tg.openLink('https://t.me/AutoAlexsandr');
+  else window.open('https://t.me/AutoAlexsandr', '_blank');
 }
 
 // ================================================================
@@ -608,11 +905,8 @@ function openCall(name, phone) {
 
 function doCall() {
   if (!currentCallPhone) return;
-  if (tg) {
-    tg.openLink('tel:' + currentCallPhone);
-  } else {
-    window.location.href = 'tel:' + currentCallPhone;
-  }
+  if (tg) tg.openLink('tel:' + currentCallPhone);
+  else window.location.href = 'tel:' + currentCallPhone;
 }
 
 function closeCall(e) {
