@@ -79,7 +79,18 @@
       justify-content: space-between; margin-bottom: 10px;
     }
     .biz-name { font-size: 15px; font-weight: 600; }
+    .header-right {
+      display: flex; align-items: center; gap: 8px;
+    }
     .date { font-size: 11px; color: var(--text3); }
+    .refresh-btn {
+      background: none; border: none; cursor: pointer;
+      font-size: 16px; padding: 2px 4px;
+      color: var(--text3); line-height: 1;
+      transition: color .2s;
+    }
+    .refresh-btn:active { color: var(--amber); }
+    .refresh-btn.spinning { animation: spin .6s linear infinite; }
 
     .stats-row { display: grid; grid-template-columns: repeat(3,1fr); gap: 6px; }
     .stat {
@@ -88,6 +99,7 @@
     }
     .stat-num { font-size: 20px; font-weight: 600; line-height: 1; }
     .stat-lbl { font-size: 10px; color: var(--text3); margin-top: 3px; }
+    .stat-sub { font-size: 9px; color: var(--text3); margin-top: 1px; }
     .stat--amber .stat-num { color: var(--amber); }
     .stat--blue  .stat-num { color: var(--blue); }
     .stat--green .stat-num { color: var(--green); }
@@ -141,9 +153,10 @@
       font-size: 10px; font-weight: 600;
       padding: 2px 9px; border-radius: 100px;
     }
-    .badge--wait  { background: var(--amber-bg); color: var(--amber); }
-    .badge--work  { background: var(--blue-bg);  color: var(--blue); }
-    .badge--done  { background: var(--green-bg); color: var(--green); }
+    .badge--wait   { background: var(--amber-bg); color: var(--amber); }
+    .badge--work   { background: var(--blue-bg);  color: var(--blue); }
+    .badge--done   { background: var(--green-bg); color: var(--green); }
+    .badge--reject { background: var(--red-bg);   color: var(--red); }
 
     .card-car {
       font-size: 11px; color: var(--text2); margin-bottom: 6px;
@@ -155,10 +168,19 @@
     .card-service { font-size: 12px; color: var(--text2); }
     .card-time    { font-size: 11px; color: var(--text3); }
 
+    /* ── WISH BLOCK ── */
+    .card-wish {
+      font-size: 12px; color: var(--text2);
+      background: var(--bg3); border-radius: 6px;
+      padding: 6px 10px; margin-bottom: 10px;
+      line-height: 1.5;
+    }
+
     .card-btns { display: flex; gap: 6px; }
     .cbtn {
-      flex: 1; padding: 7px 4px; border-radius: 7px;
-      font-size: 11px; font-weight: 600;
+      flex: 1; padding: 10px 6px;
+      border-radius: 8px; min-height: 40px;
+      font-size: 12px; font-weight: 600;
       text-align: center; cursor: pointer;
       border: none; outline: none;
       transition: opacity .15s, transform .1s;
@@ -169,6 +191,27 @@
     .cbtn--call { background: var(--blue-bg);  color: var(--blue); }
     .cbtn--done { background: var(--amber-bg); color: var(--amber); }
     .cbtn--no   { background: var(--red-bg);   color: var(--red); }
+
+    /* ── SKELETON ── */
+    @keyframes shimmer {
+      0%   { opacity: .4; }
+      50%  { opacity: .8; }
+      100% { opacity: .4; }
+    }
+    .skeleton-card {
+      background: var(--bg2); border-radius: 12px;
+      padding: 13px 14px; border: 0.5px solid var(--border);
+      animation: shimmer 1.4s ease-in-out infinite;
+    }
+    .skel-line {
+      background: var(--bg3); border-radius: 4px; margin-bottom: 8px;
+    }
+    .skel-line--title  { height: 14px; width: 55%; }
+    .skel-line--sub    { height: 11px; width: 35%; margin-bottom: 12px; }
+    .skel-line--meta   { height: 11px; width: 45%; }
+    .skel-line--meta2  { height: 11px; width: 25%; margin-bottom: 14px; }
+    .skel-btns { display: flex; gap: 6px; }
+    .skel-btn  { flex: 1; height: 40px; background: var(--bg3); border-radius: 8px; }
 
     /* ── CALL SHEET ── */
     .sheet-backdrop {
@@ -253,20 +296,26 @@
   <div class="header">
     <div class="header-top">
       <span class="biz-name" id="biz-name">—</span>
-      <span class="date" id="header-date">—</span>
+      <div class="header-right">
+        <span class="date" id="header-date">—</span>
+        <button class="refresh-btn" id="refresh-btn" onclick="manualRefresh()" title="Обновить">🔄</button>
+      </div>
     </div>
     <div class="stats-row">
       <div class="stat stat--amber">
         <div class="stat-num" id="cnt-wait">0</div>
         <div class="stat-lbl">Ожидают</div>
+        <div class="stat-sub">за сегодня</div>
       </div>
       <div class="stat stat--blue">
         <div class="stat-num" id="cnt-work">0</div>
         <div class="stat-lbl">В работе</div>
+        <div class="stat-sub">за сегодня</div>
       </div>
       <div class="stat stat--green">
         <div class="stat-num" id="cnt-done">0</div>
         <div class="stat-lbl">Готово</div>
+        <div class="stat-sub">за сегодня</div>
       </div>
     </div>
   </div>
@@ -306,7 +355,7 @@
 
 <script>
 // ================================================================
-// CONFIG — замените на реальные URL ваших n8n вебхуков
+// CONFIG
 // ================================================================
 const API = {
   auth:   'https://mokokagrielif.beget.app/webhook/manager/auth',
@@ -317,11 +366,11 @@ const API = {
 // ================================================================
 // STATE
 // ================================================================
-let bookings   = [];
-let businessId = null;
-let bizName    = '';
+let bookings     = [];
+let businessId   = null;
+let bizName      = '';
 let activeFilter = 'all';
-let pendingAction = null; // { bookingId, newStatus, label }
+let pendingAction = null;
 
 // ================================================================
 // INIT
@@ -331,30 +380,29 @@ if (tg) { tg.ready(); tg.expand(); }
 
 async function init() {
   const telegramId = tg?.initDataUnsafe?.user?.id || null;
+  const idToSend   = telegramId ? String(telegramId) : null;
 
-  const idToSend = telegramId ? String(telegramId) : null;
-
-  if (!idToSend) {
-    showAuthError();
-    return;
-  }
+  if (!idToSend) { showAuthError(); return; }
 
   try {
     const authRes = await apiFetch(API.auth, {
       telegram_id: idToSend,
-      init_data: tg?.initData || '',
+      init_data:   tg?.initData || '',
     });
 
     if (!authRes.ok) { showAuthError(); return; }
 
     businessId = authRes.business_id;
     bizName    = authRes.display_name || 'Бизнес';
-    document.getElementById('biz-name').textContent = bizName;
+    document.getElementById('biz-name').textContent  = bizName;
     document.getElementById('header-date').textContent = formatDate(new Date());
 
     await loadBookings();
     hide('loader');
     show('app');
+
+    // Авто-обновление каждые 30 секунд
+    setInterval(() => loadBookings(), 30000);
 
   } catch (e) {
     console.error(e);
@@ -377,6 +425,7 @@ async function apiFetch(url, body) {
 }
 
 async function loadBookings() {
+  showSkeleton();
   const res = await apiFetch(API.list, { business_id: businessId });
   if (res.ok && Array.isArray(res.bookings)) {
     bookings = res.bookings;
@@ -397,27 +446,56 @@ async function doUpdate(bookingId, newStatus) {
 }
 
 // ================================================================
+// MANUAL REFRESH
+// ================================================================
+async function manualRefresh() {
+  const btn = document.getElementById('refresh-btn');
+  btn.classList.add('spinning');
+  await loadBookings();
+  setTimeout(() => btn.classList.remove('spinning'), 800);
+}
+
+// ================================================================
 // RENDER
 // ================================================================
 const STATUS_MAP = {
-  created:   { filter: 'wait', badge: 'badge--wait', label: 'Ожидает записи' },
-  confirmed: { filter: 'work', badge: 'badge--work', label: 'Записан' },
-  served:    { filter: 'done', badge: 'badge--done', label: 'Обслужен' },
-  rejected:  { filter: 'done', badge: 'badge--done', label: 'Отказ' },
+  created:   { filter: 'wait', badge: 'badge--wait',   label: 'Ожидает записи' },
+  confirmed: { filter: 'work', badge: 'badge--work',   label: 'Записан' },
+  served:    { filter: 'done', badge: 'badge--done',   label: 'Обслужен' },
+  rejected:  { filter: 'done', badge: 'badge--reject', label: 'Отказ' },
 };
 
 function renderAll() {
   updateStats();
+  updateTabCounts();
   renderList();
 }
 
+// Считаем только заявки за сегодня
 function updateStats() {
-  const w = bookings.filter(b => b.status === 'created').length;
-  const r = bookings.filter(b => b.status === 'confirmed').length;
-  const d = bookings.filter(b => b.status === 'served').length;
+  const today = new Date().toISOString().slice(0, 10);
+  const todayB = bookings.filter(b => (b.created_at || '').slice(0, 10) === today);
+
+  const w = todayB.filter(b => b.status === 'created').length;
+  const r = todayB.filter(b => b.status === 'confirmed').length;
+  const d = todayB.filter(b => b.status === 'served').length;
+
   document.getElementById('cnt-wait').textContent = w;
   document.getElementById('cnt-work').textContent = r;
   document.getElementById('cnt-done').textContent = d;
+}
+
+// Счётчики на табах
+function updateTabCounts() {
+  const total = bookings.length;
+  const wait  = bookings.filter(b => b.status === 'created').length;
+  const work  = bookings.filter(b => b.status === 'confirmed').length;
+  const done  = bookings.filter(b => b.status === 'served' || b.status === 'rejected').length;
+
+  document.querySelector('[data-filter="all"]').textContent   = `Все (${total})`;
+  document.querySelector('[data-filter="wait"]').textContent  = `Ожидают (${wait})`;
+  document.querySelector('[data-filter="work"]').textContent  = `В работе (${work})`;
+  document.querySelector('[data-filter="done"]').textContent  = `Готово (${done})`;
 }
 
 function renderList() {
@@ -435,13 +513,14 @@ function renderList() {
 }
 
 function cardHTML(b) {
-  const s = STATUS_MAP[b.status] || STATUS_MAP.created;
-  const phone = b.phone || '';
+  const s        = STATUS_MAP[b.status] || STATUS_MAP.created;
+  const phone    = b.phone || b.client_phone || '';
   const phoneSafe = phone.replace(/'/g, "\\'");
   const nameSafe  = (b.client_name || b.name || '—').replace(/'/g, "\\'");
+  const bid       = b.booking_id || b.id;
 
+  // Кнопки действий
   let btns = '';
-  const bid = b.booking_id || b.id;
   if (b.status === 'created') {
     btns = `
       <button class="cbtn cbtn--yes"  onclick="confirmAction('${bid}','confirmed','Записать клиента?','${nameSafe} · ${b.service || ''}')">✓ Записать</button>
@@ -453,21 +532,55 @@ function cardHTML(b) {
       <button class="cbtn cbtn--call" onclick="openCall('${nameSafe}','${phoneSafe}')">📞 Позвонить</button>
       <button class="cbtn cbtn--no"   onclick="confirmAction('${bid}','rejected','Клиент не пришёл?','${nameSafe}')">✕ Не пришёл</button>`;
   } else {
+    // served / rejected — только звонок
     btns = `<button class="cbtn cbtn--call" onclick="openCall('${nameSafe}','${phoneSafe}')">📞 Позвонить</button>`;
   }
+
+  // Пожелание клиента
+  const wishText = b.wish || b.notes || b.problem_or_wish || '';
+  const wishBlock = wishText
+    ? `<div class="card-wish">💬 ${wishText}</div>`
+    : '';
 
   return `<div class="card">
     <div class="card-top">
       <span class="card-name">${b.client_name || b.name || '—'}</span>
       <span class="badge ${s.badge}">${s.label}</span>
     </div>
-    <div class="card-car">${b.car_model || '—'}</div>
+    <div class="card-car">${b.car_model || b.client_car_type || '—'}</div>
     <div class="card-meta">
       <span class="card-service">${b.service || '—'}</span>
-      <span class="card-time">${b.preferred_time || b.created_at?.slice(0,10) || '—'}</span>
+      <span class="card-time">${b.preferred_time || b.desired_datetime || b.created_at?.slice(0,10) || '—'}</span>
     </div>
+    ${wishBlock}
     <div class="card-btns">${btns}</div>
   </div>`;
+}
+
+// ================================================================
+// SKELETON
+// ================================================================
+function showSkeleton() {
+  const list = document.getElementById('list');
+  if (!list) return;
+  const card = `
+    <div class="skeleton-card">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+        <div class="skel-line skel-line--title"></div>
+        <div class="skel-line" style="height:18px;width:80px;border-radius:100px"></div>
+      </div>
+      <div class="skel-line skel-line--sub"></div>
+      <div style="display:flex;justify-content:space-between;margin-bottom:14px">
+        <div class="skel-line skel-line--meta" style="margin-bottom:0"></div>
+        <div class="skel-line skel-line--meta2" style="margin-bottom:0"></div>
+      </div>
+      <div class="skel-btns">
+        <div class="skel-btn"></div>
+        <div class="skel-btn"></div>
+        <div class="skel-btn"></div>
+      </div>
+    </div>`;
+  list.innerHTML = card + card + card;
 }
 
 // ================================================================
@@ -495,7 +608,6 @@ function openCall(name, phone) {
 
 function doCall() {
   if (!currentCallPhone) return;
-  // В TMA открываем звонок через нативный способ
   if (tg) {
     tg.openLink('tel:' + currentCallPhone);
   } else {
