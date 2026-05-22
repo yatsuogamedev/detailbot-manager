@@ -1,0 +1,536 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"/>
+  <title>DetailBot — Менеджер</title>
+  <script src="https://telegram.org/js/telegram-web-app.js"></script>
+  <style>
+    :root {
+      --bg:      #0f0f0f;
+      --bg2:     #1a1a1a;
+      --bg3:     #242424;
+      --border:  rgba(255,255,255,.08);
+      --text:    #ffffff;
+      --text2:   rgba(255,255,255,.55);
+      --text3:   rgba(255,255,255,.30);
+      --amber:   #f5a623;
+      --blue:    #60a5fa;
+      --green:   #4ade80;
+      --red:     #f87171;
+      --amber-bg: rgba(245,166,35,.14);
+      --blue-bg:  rgba(96,165,250,.13);
+      --green-bg: rgba(74,222,128,.12);
+      --red-bg:   rgba(248,113,113,.10);
+    }
+    * { box-sizing:border-box; margin:0; padding:0; -webkit-tap-highlight-color:transparent; }
+    body {
+      font-family: -apple-system, 'Inter', sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      overflow-x: hidden;
+    }
+
+    /* ── LOADER ── */
+    #loader {
+      position: fixed; inset: 0;
+      background: var(--bg);
+      display: flex; flex-direction: column;
+      align-items: center; justify-content: center;
+      gap: 16px; z-index: 999;
+    }
+    .loader-logo {
+      width: 64px; height: 64px; border-radius: 18px;
+      background: linear-gradient(135deg, #f5a623, #ff6b35);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 26px; font-weight: 700; color: #000;
+    }
+    .loader-text { color: var(--text2); font-size: 14px; }
+    .loader-spinner {
+      width: 24px; height: 24px;
+      border: 2px solid var(--border);
+      border-top-color: var(--amber);
+      border-radius: 50%;
+      animation: spin .8s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* ── AUTH ERROR ── */
+    #auth-error {
+      display: none; position: fixed; inset: 0;
+      background: var(--bg);
+      align-items: center; justify-content: center;
+      flex-direction: column; gap: 12px; text-align: center; padding: 32px;
+    }
+    #auth-error .ico { font-size: 48px; }
+    #auth-error h2 { font-size: 18px; }
+    #auth-error p { color: var(--text2); font-size: 14px; line-height: 1.6; }
+
+    /* ── HEADER ── */
+    .header {
+      position: sticky; top: 0; z-index: 50;
+      background: var(--bg);
+      border-bottom: 0.5px solid var(--border);
+      padding: 12px 16px 10px;
+    }
+    .header-top {
+      display: flex; align-items: center;
+      justify-content: space-between; margin-bottom: 10px;
+    }
+    .biz-name { font-size: 15px; font-weight: 600; }
+    .date { font-size: 11px; color: var(--text3); }
+
+    .stats-row { display: grid; grid-template-columns: repeat(3,1fr); gap: 6px; }
+    .stat {
+      background: var(--bg2); border-radius: 8px;
+      padding: 8px 10px; text-align: center;
+    }
+    .stat-num { font-size: 20px; font-weight: 600; line-height: 1; }
+    .stat-lbl { font-size: 10px; color: var(--text3); margin-top: 3px; }
+    .stat--amber .stat-num { color: var(--amber); }
+    .stat--blue  .stat-num { color: var(--blue); }
+    .stat--green .stat-num { color: var(--green); }
+
+    /* ── TABS ── */
+    .tabs {
+      display: flex;
+      background: var(--bg);
+      border-bottom: 0.5px solid var(--border);
+      overflow-x: auto;
+      scrollbar-width: none;
+    }
+    .tabs::-webkit-scrollbar { display: none; }
+    .tab {
+      flex: 1; min-width: 70px;
+      padding: 10px 6px; text-align: center;
+      font-size: 12px; color: var(--text3);
+      position: relative; cursor: pointer;
+      white-space: nowrap; user-select: none;
+      transition: color .2s;
+    }
+    .tab.active { color: var(--amber); }
+    .tab.active::after {
+      content: '';
+      position: absolute; bottom: 0; left: 15%; right: 15%;
+      height: 1.5px; background: var(--amber); border-radius: 2px;
+    }
+
+    /* ── LIST ── */
+    .list { padding: 10px 12px; display: flex; flex-direction: column; gap: 8px; }
+
+    .empty {
+      text-align: center; padding: 48px 24px;
+      color: var(--text3); font-size: 14px;
+    }
+    .empty-ico { font-size: 36px; margin-bottom: 12px; }
+
+    /* ── CARD ── */
+    .card {
+      background: var(--bg2); border-radius: 12px;
+      padding: 13px 14px;
+      border: 0.5px solid var(--border);
+      transition: border-color .2s;
+    }
+    .card-top {
+      display: flex; align-items: center;
+      justify-content: space-between; margin-bottom: 5px;
+    }
+    .card-name { font-size: 14px; font-weight: 600; }
+    .badge {
+      font-size: 10px; font-weight: 600;
+      padding: 2px 9px; border-radius: 100px;
+    }
+    .badge--wait  { background: var(--amber-bg); color: var(--amber); }
+    .badge--work  { background: var(--blue-bg);  color: var(--blue); }
+    .badge--done  { background: var(--green-bg); color: var(--green); }
+
+    .card-car {
+      font-size: 11px; color: var(--text2); margin-bottom: 6px;
+    }
+    .card-meta {
+      display: flex; align-items: center;
+      justify-content: space-between; margin-bottom: 10px;
+    }
+    .card-service { font-size: 12px; color: var(--text2); }
+    .card-time    { font-size: 11px; color: var(--text3); }
+
+    .card-btns { display: flex; gap: 6px; }
+    .cbtn {
+      flex: 1; padding: 7px 4px; border-radius: 7px;
+      font-size: 11px; font-weight: 600;
+      text-align: center; cursor: pointer;
+      border: none; outline: none;
+      transition: opacity .15s, transform .1s;
+      font-family: inherit;
+    }
+    .cbtn:active { opacity: .75; transform: scale(.97); }
+    .cbtn--yes  { background: var(--green-bg); color: var(--green); }
+    .cbtn--call { background: var(--blue-bg);  color: var(--blue); }
+    .cbtn--done { background: var(--amber-bg); color: var(--amber); }
+    .cbtn--no   { background: var(--red-bg);   color: var(--red); }
+
+    /* ── CALL SHEET ── */
+    .sheet-backdrop {
+      display: none; position: fixed; inset: 0;
+      background: rgba(0,0,0,.6); z-index: 200;
+      align-items: flex-end; justify-content: center;
+    }
+    .sheet-backdrop.show { display: flex; }
+    .call-sheet {
+      background: #1c1c1e; border-radius: 14px 14px 0 0;
+      width: 100%; padding: 20px 16px;
+      padding-bottom: max(28px, env(safe-area-inset-bottom));
+      text-align: center;
+      animation: slideUp .25s ease;
+    }
+    @keyframes slideUp {
+      from { transform: translateY(100%); }
+      to   { transform: translateY(0); }
+    }
+    .sheet-hint   { color: var(--text3); font-size: 12px; margin-bottom: 4px; }
+    .sheet-name   { font-size: 20px; font-weight: 600; margin-bottom: 4px; }
+    .sheet-phone  { color: var(--blue); font-size: 15px; margin-bottom: 24px; }
+    .sheet-call {
+      display: block; width: 100%;
+      background: #30d158; color: #fff;
+      border: none; border-radius: 100px;
+      padding: 15px; font-size: 17px; font-weight: 600;
+      cursor: pointer; margin-bottom: 10px;
+      font-family: inherit; text-decoration: none;
+    }
+    .sheet-cancel {
+      display: block; width: 100%;
+      background: #2c2c2e; color: var(--text);
+      border: none; border-radius: 100px;
+      padding: 15px; font-size: 17px;
+      cursor: pointer; font-family: inherit;
+    }
+
+    /* ── CONFIRM MODAL ── */
+    .confirm-backdrop {
+      display: none; position: fixed; inset: 0;
+      background: rgba(0,0,0,.6); z-index: 300;
+      align-items: center; justify-content: center; padding: 24px;
+    }
+    .confirm-backdrop.show { display: flex; }
+    .confirm-box {
+      background: #1c1c1e; border-radius: 14px;
+      padding: 20px; width: 100%; max-width: 320px;
+      text-align: center;
+    }
+    .confirm-title { font-size: 16px; font-weight: 600; margin-bottom: 8px; }
+    .confirm-sub   { font-size: 13px; color: var(--text2); margin-bottom: 20px; line-height: 1.5; }
+    .confirm-btns  { display: flex; gap: 8px; }
+    .confirm-btns button {
+      flex: 1; padding: 12px; border-radius: 10px;
+      font-size: 14px; font-weight: 600; cursor: pointer;
+      border: none; font-family: inherit;
+    }
+    .confirm-yes { background: var(--green-bg); color: var(--green); }
+    .confirm-no  { background: var(--bg3); color: var(--text2); }
+  </style>
+</head>
+<body>
+
+<!-- LOADER -->
+<div id="loader">
+  <div class="loader-logo">DB</div>
+  <div class="loader-spinner"></div>
+  <div class="loader-text">Загрузка панели...</div>
+</div>
+
+<!-- AUTH ERROR -->
+<div id="auth-error" style="display:none;flex-direction:column">
+  <div class="ico">🔒</div>
+  <h2>Нет доступа</h2>
+  <p>Ваш аккаунт не привязан ни к одному бизнесу в DetailBot.<br>Обратитесь к администратору.</p>
+</div>
+
+<!-- MAIN APP (hidden until auth) -->
+<div id="app" style="display:none">
+
+  <div class="header">
+    <div class="header-top">
+      <span class="biz-name" id="biz-name">—</span>
+      <span class="date" id="header-date">—</span>
+    </div>
+    <div class="stats-row">
+      <div class="stat stat--amber">
+        <div class="stat-num" id="cnt-wait">0</div>
+        <div class="stat-lbl">Ожидают</div>
+      </div>
+      <div class="stat stat--blue">
+        <div class="stat-num" id="cnt-work">0</div>
+        <div class="stat-lbl">В работе</div>
+      </div>
+      <div class="stat stat--green">
+        <div class="stat-num" id="cnt-done">0</div>
+        <div class="stat-lbl">Готово</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="tabs">
+    <div class="tab active" data-filter="all"   onclick="setTab(this)">Все</div>
+    <div class="tab"        data-filter="wait"  onclick="setTab(this)">Ожидают</div>
+    <div class="tab"        data-filter="work"  onclick="setTab(this)">В работе</div>
+    <div class="tab"        data-filter="done"  onclick="setTab(this)">Готово</div>
+  </div>
+
+  <div class="list" id="list"></div>
+</div>
+
+<!-- CALL SHEET -->
+<div class="sheet-backdrop" id="call-backdrop" onclick="closeCall(event)">
+  <div class="call-sheet">
+    <div class="sheet-hint">Клиент DetailBot</div>
+    <div class="sheet-name"  id="call-name">—</div>
+    <div class="sheet-phone" id="call-phone">—</div>
+    <a  class="sheet-call"  id="call-link"  href="#">Позвонить</a>
+    <button class="sheet-cancel" onclick="document.getElementById('call-backdrop').classList.remove('show')">Отменить</button>
+  </div>
+</div>
+
+<!-- CONFIRM MODAL -->
+<div class="confirm-backdrop" id="confirm-backdrop">
+  <div class="confirm-box">
+    <div class="confirm-title" id="confirm-title">—</div>
+    <div class="confirm-sub"   id="confirm-sub">—</div>
+    <div class="confirm-btns">
+      <button class="confirm-yes" id="confirm-yes-btn">Подтвердить</button>
+      <button class="confirm-no"  onclick="closeConfirm()">Отмена</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ================================================================
+// CONFIG — замените на реальные URL ваших n8n вебхуков
+// ================================================================
+const API = {
+  auth:   'https://YOUR_N8N_HOST/webhook/manager/auth',
+  list:   'https://YOUR_N8N_HOST/webhook/manager/bookings',
+  update: 'https://YOUR_N8N_HOST/webhook/manager/update',
+};
+
+// ================================================================
+// STATE
+// ================================================================
+let bookings   = [];
+let businessId = null;
+let bizName    = '';
+let activeFilter = 'all';
+let pendingAction = null; // { bookingId, newStatus, label }
+
+// ================================================================
+// INIT
+// ================================================================
+const tg = window.Telegram?.WebApp;
+if (tg) { tg.ready(); tg.expand(); }
+
+async function init() {
+  const telegramId = tg?.initDataUnsafe?.user?.id || null;
+
+  // --- DEV FALLBACK: если открыто не в Telegram, используем тестовый ID ---
+  const devMode = !tg?.initDataUnsafe?.user;
+  if (devMode) console.warn('[TMA] Dev mode — Telegram user not found, using test ID');
+
+  try {
+    const authRes = await apiFetch(API.auth, {
+      telegram_id: telegramId || 'DEV_TEST',
+      init_data: tg?.initData || '',
+    });
+
+    if (!authRes.ok) { showAuthError(); return; }
+
+    businessId = authRes.business_id;
+    bizName    = authRes.display_name || 'Бизнес';
+    document.getElementById('biz-name').textContent = bizName;
+    document.getElementById('header-date').textContent = formatDate(new Date());
+
+    await loadBookings();
+    hide('loader');
+    show('app');
+
+  } catch (e) {
+    console.error(e);
+    showAuthError();
+  }
+}
+
+// ================================================================
+// API
+// ================================================================
+async function apiFetch(url, body) {
+  const res = await fetch(url, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
+  });
+  if (!res.ok) return { ok: false };
+  const data = await res.json();
+  return { ok: true, ...data };
+}
+
+async function loadBookings() {
+  const res = await apiFetch(API.list, { business_id: businessId });
+  if (res.ok && Array.isArray(res.bookings)) {
+    bookings = res.bookings;
+  }
+  renderAll();
+}
+
+async function doUpdate(bookingId, newStatus) {
+  const res = await apiFetch(API.update, {
+    business_id: businessId,
+    booking_id:  bookingId,
+    new_status:  newStatus,
+  });
+  if (res.ok) {
+    await loadBookings();
+    if (tg) tg.HapticFeedback?.notificationOccurred('success');
+  }
+}
+
+// ================================================================
+// RENDER
+// ================================================================
+const STATUS_MAP = {
+  created:   { filter: 'wait', badge: 'badge--wait', label: 'Ожидает записи' },
+  confirmed: { filter: 'work', badge: 'badge--work', label: 'Записан' },
+  served:    { filter: 'done', badge: 'badge--done', label: 'Обслужен' },
+  rejected:  { filter: 'done', badge: 'badge--done', label: 'Отказ' },
+};
+
+function renderAll() {
+  updateStats();
+  renderList();
+}
+
+function updateStats() {
+  const w = bookings.filter(b => b.status === 'created').length;
+  const r = bookings.filter(b => b.status === 'confirmed').length;
+  const d = bookings.filter(b => b.status === 'served').length;
+  document.getElementById('cnt-wait').textContent = w;
+  document.getElementById('cnt-work').textContent = r;
+  document.getElementById('cnt-done').textContent = d;
+}
+
+function renderList() {
+  const list = document.getElementById('list');
+  const filtered = activeFilter === 'all'
+    ? bookings
+    : bookings.filter(b => (STATUS_MAP[b.status]?.filter || 'done') === activeFilter);
+
+  if (!filtered.length) {
+    list.innerHTML = `<div class="empty"><div class="empty-ico">📋</div>Заявок нет</div>`;
+    return;
+  }
+
+  list.innerHTML = filtered.map(b => cardHTML(b)).join('');
+}
+
+function cardHTML(b) {
+  const s = STATUS_MAP[b.status] || STATUS_MAP.created;
+  const phone = b.phone || '';
+  const phoneSafe = phone.replace(/'/g, "\\'");
+  const nameSafe  = (b.client_name || b.name || '—').replace(/'/g, "\\'");
+
+  let btns = '';
+  if (b.status === 'created') {
+    btns = `
+      <button class="cbtn cbtn--yes"  onclick="confirmAction('${b.id}','confirmed','Записать клиента?','${nameSafe} · ${b.service || ''}')">✓ Записать</button>
+      <button class="cbtn cbtn--call" onclick="openCall('${nameSafe}','${phoneSafe}')">📞 Позвонить</button>
+      <button class="cbtn cbtn--no"   onclick="confirmAction('${b.id}','rejected','Отказать клиенту?','${nameSafe}')">✕ Отказать</button>`;
+  } else if (b.status === 'confirmed') {
+    btns = `
+      <button class="cbtn cbtn--done" onclick="confirmAction('${b.id}','served','Отметить как обслужен?','${nameSafe}')">✓ Обслужен</button>
+      <button class="cbtn cbtn--call" onclick="openCall('${nameSafe}','${phoneSafe}')">📞 Позвонить</button>
+      <button class="cbtn cbtn--no"   onclick="confirmAction('${b.id}','rejected','Клиент не пришёл?','${nameSafe}')">✕ Не пришёл</button>`;
+  } else {
+    btns = `<button class="cbtn cbtn--call" onclick="openCall('${nameSafe}','${phoneSafe}')">📞 Позвонить</button>`;
+  }
+
+  return `<div class="card">
+    <div class="card-top">
+      <span class="card-name">${b.client_name || b.name || '—'}</span>
+      <span class="badge ${s.badge}">${s.label}</span>
+    </div>
+    <div class="card-car">${b.car_model || '—'}${b.channel ? ' · ' + b.channel : ''}</div>
+    <div class="card-meta">
+      <span class="card-service">${b.service || '—'}</span>
+      <span class="card-time">${b.preferred_time || b.created_at?.slice(0,10) || '—'}</span>
+    </div>
+    <div class="card-btns">${btns}</div>
+  </div>`;
+}
+
+// ================================================================
+// TABS
+// ================================================================
+function setTab(el) {
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  el.classList.add('active');
+  activeFilter = el.dataset.filter;
+  renderList();
+}
+
+// ================================================================
+// CALL SHEET
+// ================================================================
+function openCall(name, phone) {
+  document.getElementById('call-name').textContent  = name;
+  document.getElementById('call-phone').textContent = phone;
+  document.getElementById('call-link').href = 'tel:' + phone.replace(/[^+\d]/g,'');
+  document.getElementById('call-backdrop').classList.add('show');
+  if (tg) tg.HapticFeedback?.impactOccurred('light');
+}
+
+function closeCall(e) {
+  if (e.target === document.getElementById('call-backdrop'))
+    document.getElementById('call-backdrop').classList.remove('show');
+}
+
+// ================================================================
+// CONFIRM MODAL
+// ================================================================
+function confirmAction(bookingId, newStatus, title, sub) {
+  pendingAction = { bookingId, newStatus };
+  document.getElementById('confirm-title').textContent = title;
+  document.getElementById('confirm-sub').textContent   = sub;
+  document.getElementById('confirm-yes-btn').onclick   = async () => {
+    closeConfirm();
+    await doUpdate(bookingId, newStatus);
+  };
+  document.getElementById('confirm-backdrop').classList.add('show');
+  if (tg) tg.HapticFeedback?.impactOccurred('medium');
+}
+
+function closeConfirm() {
+  document.getElementById('confirm-backdrop').classList.remove('show');
+  pendingAction = null;
+}
+
+// ================================================================
+// UTILS
+// ================================================================
+function show(id) { document.getElementById(id).style.display = 'block'; }
+function hide(id) { document.getElementById(id).style.display = 'none'; }
+
+function showAuthError() {
+  hide('loader');
+  document.getElementById('auth-error').style.display = 'flex';
+}
+
+function formatDate(d) {
+  return d.toLocaleDateString('ru-RU', { weekday:'short', day:'numeric', month:'long' });
+}
+
+// ================================================================
+// START
+// ================================================================
+init();
+</script>
+</body>
+</html>
