@@ -260,7 +260,7 @@
     }
 
     .analytics-stats {
-      display: grid; grid-template-columns: repeat(3,1fr); gap: 8px;
+      display: grid; grid-template-columns: repeat(2,1fr); gap: 8px;
       margin-bottom: 16px;
     }
     .a-stat {
@@ -273,6 +273,7 @@
     .a-stat--amber .a-stat-num { color: var(--amber); }
     .a-stat--blue  .a-stat-num { color: var(--blue); }
     .a-stat--green .a-stat-num { color: var(--green); }
+    .a-stat--red   .a-stat-num { color: var(--red); }
 
     .analytics-block {
       background: var(--bg2); border-radius: 12px;
@@ -490,6 +491,10 @@
           <div class="a-stat-num" id="a-served">0</div>
           <div class="a-stat-lbl">Обслужено</div>
         </div>
+        <div class="a-stat a-stat--red">
+          <div class="a-stat-num" id="a-rejected">0</div>
+          <div class="a-stat-lbl">Отказов</div>
+        </div>
       </div>
 
       <div class="analytics-block">
@@ -592,9 +597,10 @@
 // CONFIG
 // ================================================================
 const API = {
-  auth:   'https://mokokagrielif.beget.app/webhook/manager/auth',
-  list:   'https://mokokagrielif.beget.app/webhook/manager/bookings',
-  update: 'https://mokokagrielif.beget.app/webhook/manager/update',
+  auth:      'https://mokokagrielif.beget.app/webhook/manager/auth',
+  list:      'https://mokokagrielif.beget.app/webhook/manager/bookings',
+  update:    'https://mokokagrielif.beget.app/webhook/manager/update',
+  analytics: 'https://mokokagrielif.beget.app/webhook/manager/analytics',
 };
 
 // вставьте ссылку на Google Таблицу с прайсом
@@ -610,6 +616,8 @@ let activeFilter     = 'all';
 let activePeriod     = 'day';
 let pendingAction    = null;
 let autoRefreshTimer = null;
+let analyticsData    = null;
+let analyticsLoading = false;
 
 // ================================================================
 // TG INIT
@@ -781,7 +789,7 @@ function showScreen(name) {
   document.querySelectorAll('.nav-btn').forEach(b => {
     b.classList.toggle('active', b.dataset.screen === name);
   });
-  if (name === 'analytics') renderAnalytics();
+  if (name === 'analytics') { loadAnalytics(); renderAnalytics(); }
   if (name === 'settings')  renderSettings();
   if (tg) tg.HapticFeedback?.selectionChanged?.();
 }
@@ -1031,10 +1039,24 @@ function setTabAnimated(el, dir) {
 // ================================================================
 // ANALYTICS
 // ================================================================
+async function loadAnalytics() {
+  if (!businessId || analyticsLoading) return;
+  analyticsLoading = true;
+  try {
+    const res = await apiFetch(API.analytics, { business_id: businessId });
+    if (res.ok) {
+      analyticsData = res;
+      if (activePeriod === 'day') renderAnalytics();
+    }
+  } catch (_) {}
+  analyticsLoading = false;
+}
+
 function setPeriod(el) {
   document.querySelectorAll('.period-btn').forEach(b => b.classList.remove('active'));
   el.classList.add('active');
   activePeriod = el.dataset.period;
+  if (activePeriod === 'day') loadAnalytics();
   renderAnalytics();
 }
 
@@ -1063,20 +1085,36 @@ function filterByPeriod(arr, period) {
 }
 
 function renderAnalytics() {
-  const data      = filterByPeriod(bookings, activePeriod);
-  const created   = data.length;
-  const confirmed = data.filter(b => b.status === 'confirmed' || b.status === 'served').length;
-  const served    = data.filter(b => b.status === 'served').length;
-  const conv      = created > 0 ? Math.round(served / created * 100) : null;
+  let created, confirmed, served, rejected;
 
-  document.getElementById('a-created').textContent   = created;
-  document.getElementById('a-confirmed').textContent = confirmed;
-  document.getElementById('a-served').textContent    = served;
-  document.getElementById('a-conv').textContent      = conv !== null ? conv + '%' : '—';
+  if (activePeriod === 'day' && analyticsData) {
+    // Данные за сегодня — из таблицы analytics_daily (точные счётчики)
+    created   = analyticsData.booking_created   || 0;
+    confirmed = analyticsData.success_booking   || 0;
+    served    = analyticsData.served_booking    || 0;
+    rejected  = analyticsData.rejected_booking  || 0;
+  } else {
+    // Неделя / месяц — считаем из загруженных заявок
+    const data = filterByPeriod(bookings, activePeriod);
+    created   = data.length;
+    confirmed = data.filter(b => b.status === 'confirmed' || b.status === 'served').length;
+    served    = data.filter(b => b.status === 'served').length;
+    rejected  = data.filter(b => b.status === 'rejected').length;
+  }
 
-  // Топ услуг
-  const svcMap = {};
-  data.forEach(b => {
+  const conv    = created > 0 ? Math.round(served / created * 100) : null;
+  const loading = analyticsLoading && activePeriod === 'day';
+
+  document.getElementById('a-created').textContent   = loading ? '…' : created;
+  document.getElementById('a-confirmed').textContent = loading ? '…' : confirmed;
+  document.getElementById('a-served').textContent    = loading ? '…' : served;
+  document.getElementById('a-rejected').textContent  = loading ? '…' : rejected;
+  document.getElementById('a-conv').textContent      = loading ? '…' : (conv !== null ? conv + '%' : '—');
+
+  // Топ услуг — всегда из загруженных заявок (analytics_daily не хранит разбивку по услугам)
+  const svcData = filterByPeriod(bookings, activePeriod);
+  const svcMap  = {};
+  svcData.forEach(b => {
     const svc = (b.service || '').trim();
     if (svc) svcMap[svc] = (svcMap[svc] || 0) + 1;
   });
