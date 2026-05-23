@@ -126,10 +126,39 @@
       height: 1.5px; background: var(--amber); border-radius: 2px;
     }
 
+    /* ── PULL-TO-REFRESH ── */
+    #ptr-indicator {
+      overflow: hidden;
+      height: 0;
+      display: flex; align-items: center; justify-content: center;
+      transition: height .15s ease;
+      color: var(--text3);
+    }
+    #ptr-indicator.ptr-ready { color: var(--amber); }
+    .ptr-spinner {
+      width: 20px; height: 20px;
+      border: 2px solid var(--border);
+      border-top-color: currentColor;
+      border-radius: 50%;
+      animation: spin .8s linear infinite;
+    }
+
     /* ── LIST ── */
     .list { padding: 10px 12px; display: flex; flex-direction: column; gap: 8px; }
     .empty { text-align: center; padding: 48px 24px; color: var(--text3); font-size: 14px; }
     .empty-ico { font-size: 36px; margin-bottom: 12px; }
+
+    /* ── SWIPE TRANSITION ── */
+    #list-wrap {
+      overflow: hidden;
+    }
+    #list {
+      transition: transform .18s ease, opacity .18s ease;
+    }
+    #list.swipe-out-left  { transform: translateX(-40px); opacity: 0; }
+    #list.swipe-out-right { transform: translateX(40px);  opacity: 0; }
+    #list.swipe-in-left   { transform: translateX(40px);  opacity: 0; transition: none; }
+    #list.swipe-in-right  { transform: translateX(-40px); opacity: 0; transition: none; }
 
     /* ── CARD ── */
     .card {
@@ -329,7 +358,7 @@
       display: block; width: 100%; background: #30d158; color: #fff;
       border: none; border-radius: 100px; padding: 15px;
       font-size: 17px; font-weight: 600; cursor: pointer; margin-bottom: 10px;
-      font-family: inherit;
+      font-family: inherit; text-decoration: none; text-align: center;
     }
     .sheet-cancel {
       display: block; width: 100%; background: #2c2c2e; color: var(--text);
@@ -358,6 +387,22 @@
     }
     .confirm-yes { background: var(--green-bg); color: var(--green); }
     .confirm-no  { background: var(--bg3); color: var(--text2); }
+
+    /* ── TOAST ── */
+    #toast {
+      position: fixed; bottom: 72px; left: 16px; right: 16px;
+      background: #2c2c2e; color: var(--text);
+      border-radius: 10px; padding: 12px 16px;
+      font-size: 14px; text-align: center;
+      transform: translateY(12px); opacity: 0;
+      transition: transform .25s ease, opacity .25s ease;
+      z-index: 400; pointer-events: none;
+    }
+    #toast.toast-show {
+      transform: translateY(0); opacity: 1;
+    }
+    #toast.toast--error { border-left: 3px solid var(--red); }
+    #toast.toast--warn  { border-left: 3px solid var(--amber); }
   </style>
 </head>
 <body>
@@ -415,7 +460,10 @@
       <div class="tab" data-filter="work"        onclick="setTab(this)">В работе</div>
       <div class="tab" data-filter="done"        onclick="setTab(this)">Готово</div>
     </div>
-    <div class="list" id="list"></div>
+    <div id="ptr-indicator"><div class="ptr-spinner"></div></div>
+    <div id="list-wrap">
+      <div class="list" id="list"></div>
+    </div>
   </div>
 
   <!-- ЭКРАН 2 — АНАЛИТИКА -->
@@ -519,7 +567,7 @@
     <div class="sheet-hint">Клиент DetailBot</div>
     <div class="sheet-name"  id="call-name">—</div>
     <div class="sheet-phone" id="call-phone">—</div>
-    <button class="sheet-call" onclick="doCall()">Позвонить</button>
+    <a class="sheet-call" id="call-link" href="#">Позвонить</a>
     <button class="sheet-cancel" onclick="document.getElementById('call-backdrop').classList.remove('show')">Отменить</button>
   </div>
 </div>
@@ -535,6 +583,9 @@
     </div>
   </div>
 </div>
+
+<!-- TOAST -->
+<div id="toast"></div>
 
 <script>
 // ================================================================
@@ -552,18 +603,52 @@ const PRICE_TABLE_URL = '';
 // ================================================================
 // STATE
 // ================================================================
-let bookings      = [];
-let businessId    = null;
-let bizName       = '';
-let activeFilter  = 'all';
-let activePeriod  = 'day';
-let pendingAction = null;
+let bookings         = [];
+let businessId       = null;
+let bizName          = '';
+let activeFilter     = 'all';
+let activePeriod     = 'day';
+let pendingAction    = null;
+let autoRefreshTimer = null;
 
 // ================================================================
 // TG INIT
 // ================================================================
 const tg = window.Telegram?.WebApp;
 if (tg) { tg.ready(); tg.expand(); }
+
+// ================================================================
+// UTILS
+// ================================================================
+function show(id) { document.getElementById(id).style.display = 'block'; }
+function hide(id) { document.getElementById(id).style.display = 'none'; }
+
+function showAuthError() {
+  hide('loader');
+  document.getElementById('auth-error').style.display = 'flex';
+}
+
+function formatDate(d) {
+  return d.toLocaleDateString('ru-RU', { weekday:'short', day:'numeric', month:'long' });
+}
+
+function escHtml(s) {
+  return String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;')
+    .replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+}
+
+// ================================================================
+// TOAST
+// ================================================================
+let toastTimer = null;
+
+function showToast(msg, type = 'error') {
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.className = 'toast-show toast--' + type;
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => { el.className = ''; }, 3000);
+}
 
 // ================================================================
 // INIT
@@ -597,52 +682,93 @@ async function init() {
   hide('loader');
   show('app');
   showScreen('bookings');
-  setInterval(() => loadBookings(), 30000);
+  autoRefreshTimer = setInterval(() => loadBookings(true), 30000);
   loadBookings();
 }
 
 // ================================================================
 // API
 // ================================================================
-async function apiFetch(url, body) {
-  const res = await fetch(url, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(body),
-  });
-  if (!res.ok) return { ok: false };
-  try {
-    const data = await res.json();
-    return { ok: true, ...data };
-  } catch {
-    // пустой или невалидный JSON от сервера — не крашим
-    return { ok: false };
+async function apiFetch(url, body, retries = 2) {
+  for (let attempt = 0; attempt <= retries; attempt++) {
+    try {
+      const res = await fetch(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+      });
+      if (!res.ok) return { ok: false };
+      try {
+        const data = await res.json();
+        return { ok: true, ...data };
+      } catch {
+        // пустой или невалидный JSON — не крашим
+        return { ok: false };
+      }
+    } catch (e) {
+      // сетевая ошибка — retry
+      if (attempt === retries) throw e;
+      await new Promise(r => setTimeout(r, 800));
+    }
   }
 }
 
-async function loadBookings() {
-  showSkeleton();
+// silent=true: не показывает skeleton (для авто-обновления и pull-to-refresh)
+async function loadBookings(silent = false) {
+  if (!silent) showSkeleton();
   try {
     const res = await apiFetch(API.list, { business_id: businessId });
-    if (res.ok && Array.isArray(res.bookings)) bookings = res.bookings;
-    else bookings = [];
+    if (res.ok && Array.isArray(res.bookings)) {
+      bookings = res.bookings;
+    } else {
+      if (!silent) showToast('⚠️ Нет связи — данные могут быть устаревшими', 'warn');
+      bookings = [];
+    }
   } catch (e) {
     console.error('loadBookings error:', e);
+    if (!silent) showToast('⚠️ Нет связи — данные могут быть устаревшими', 'warn');
     bookings = [];
   }
   renderAll();
 }
 
 async function doUpdate(bookingId, newStatus) {
-  const res = await apiFetch(API.update, {
-    business_id: businessId,
-    booking_id:  bookingId,
-    new_status:  newStatus,
+  // оптимистичное обновление: меняем статус локально и сразу рендерим
+  const idx = bookings.findIndex(b => {
+    return String(b.booking_id || b.id) === String(bookingId);
   });
-  if (res.ok) {
-    await loadBookings();
+  let oldStatus = null;
+  if (idx !== -1) {
+    oldStatus = bookings[idx].status;
+    bookings[idx] = { ...bookings[idx], status: newStatus };
+    renderAll();
     if (tg) tg.HapticFeedback?.notificationOccurred('success');
   }
+
+  // запрос к API
+  let res;
+  try {
+    res = await apiFetch(API.update, {
+      business_id: businessId,
+      booking_id:  bookingId,
+      new_status:  newStatus,
+    });
+  } catch (e) {
+    res = { ok: false };
+  }
+
+  if (!res.ok) {
+    // откатываем статус
+    if (idx !== -1 && oldStatus !== null) {
+      bookings[idx] = { ...bookings[idx], status: oldStatus };
+      renderAll();
+    }
+    showToast('❌ Ошибка — попробуйте ещё раз');
+    return;
+  }
+
+  // фоновая синхронизация без skeleton
+  loadBookings(true);
 }
 
 // ================================================================
@@ -666,7 +792,7 @@ function showScreen(name) {
 async function manualRefresh() {
   const btn = document.getElementById('refresh-btn');
   btn.classList.add('spinning');
-  await loadBookings();
+  await loadBookings(true);
   setTimeout(() => btn.classList.remove('spinning'), 800);
 }
 
@@ -678,6 +804,13 @@ const STATUS_MAP = {
   confirmed: { filter: 'work', badge: 'badge--work',   label: 'Записан' },
   served:    { filter: 'done', badge: 'badge--done',   label: 'Обслужен' },
   rejected:  { filter: 'done', badge: 'badge--reject', label: 'Отказ' },
+};
+
+const EMPTY_STATES = {
+  all:  { ico: '📋', text: 'Заявок пока нет' },
+  wait: { ico: '✅', text: 'Всё обработано — новых заявок нет' },
+  work: { ico: '⏳', text: 'Нет заявок в работе' },
+  done: { ico: '🏁', text: 'Завершённых заявок нет' },
 };
 
 function renderAll() {
@@ -712,23 +845,26 @@ function renderList() {
     : bookings.filter(b => (STATUS_MAP[b.status]?.filter || 'done') === activeFilter);
 
   if (!filtered.length) {
-    list.innerHTML = `<div class="empty"><div class="empty-ico">📋</div>Заявок нет</div>`;
+    const es = EMPTY_STATES[activeFilter] || EMPTY_STATES.all;
+    list.innerHTML = `<div class="empty"><div class="empty-ico">${es.ico}</div>${es.text}</div>`;
     return;
   }
   list.innerHTML = filtered.map(b => cardHTML(b)).join('');
 }
 
 function cardHTML(b) {
-  const s         = STATUS_MAP[b.status] || STATUS_MAP.created;
-  const phone     = b.phone || b.client_phone || '';
-  const phoneSafe = phone.replace(/'/g, "\\'");
-  const nameSafe  = (b.client_name || b.name || '—').replace(/'/g, "\\'");
-  const bid       = b.booking_id || b.id;
+  const s          = STATUS_MAP[b.status] || STATUS_MAP.created;
+  const phone      = b.phone || b.client_phone || '';
+  const phoneSafe  = phone.replace(/'/g, "\\'");
+  const clientName = b.client_name || b.name || '—';
+  const nameSafe   = clientName.replace(/'/g, "\\'");
+  const serviceSafe = (b.service || '').replace(/'/g, "\\'");
+  const bid        = b.booking_id || b.id;
 
   let btns = '';
   if (b.status === 'created') {
     btns = `
-      <button class="cbtn cbtn--yes"  onclick="confirmAction('${bid}','confirmed','Записать клиента?','${nameSafe} · ${b.service || ''}')">✓ Записать</button>
+      <button class="cbtn cbtn--yes"  onclick="confirmAction('${bid}','confirmed','Записать клиента?','${nameSafe} · ${serviceSafe}')">✓ Записать</button>
       <button class="cbtn cbtn--call" onclick="openCall('${nameSafe}','${phoneSafe}')">📞 Позвонить</button>
       <button class="cbtn cbtn--no"   onclick="confirmAction('${bid}','rejected','Отказать клиенту?','${nameSafe}')">✕ Отказать</button>`;
   } else if (b.status === 'confirmed') {
@@ -741,17 +877,17 @@ function cardHTML(b) {
   }
 
   const wishText  = b.wish || b.notes || b.problem_or_wish || '';
-  const wishBlock = wishText ? `<div class="card-wish">💬 ${wishText}</div>` : '';
+  const wishBlock = wishText ? `<div class="card-wish">💬 ${escHtml(wishText)}</div>` : '';
 
   return `<div class="card">
     <div class="card-top">
-      <span class="card-name">${b.client_name || b.name || '—'}</span>
+      <span class="card-name">${escHtml(clientName)}</span>
       <span class="badge ${s.badge}">${s.label}</span>
     </div>
-    <div class="card-car">${b.car_model || b.client_car_type || '—'}</div>
+    <div class="card-car">${escHtml(b.car_model || b.client_car_type || '—')}</div>
     <div class="card-meta">
-      <span class="card-service">${b.service || '—'}</span>
-      <span class="card-time">${b.preferred_time || b.desired_datetime || b.created_at?.slice(0,10) || '—'}</span>
+      <span class="card-service">${escHtml(b.service || '—')}</span>
+      <span class="card-time">${escHtml(b.preferred_time || b.desired_datetime || b.created_at?.slice(0,10) || '—')}</span>
     </div>
     ${wishBlock}
     <div class="card-btns">${btns}</div>
@@ -790,6 +926,107 @@ function setTab(el) {
   activeFilter = el.dataset.filter;
   renderList();
 }
+
+// ================================================================
+// SWIPE ON BOOKINGS TABS
+// ================================================================
+const TAB_ORDER = ['all', 'wait', 'work', 'done'];
+
+function switchTabByDirection(dir) {
+  const idx = TAB_ORDER.indexOf(activeFilter);
+  const next = idx + dir;
+  if (next < 0 || next >= TAB_ORDER.length) return;
+  const newFilter = TAB_ORDER[next];
+  const tabEl = document.querySelector(`[data-filter="${newFilter}"]`);
+  if (tabEl) setTabAnimated(tabEl, dir);
+}
+
+function setTabAnimated(el, dir) {
+  const list = document.getElementById('list');
+  const outClass = dir > 0 ? 'swipe-out-left' : 'swipe-out-right';
+  const inClass  = dir > 0 ? 'swipe-in-left'  : 'swipe-in-right';
+
+  list.classList.add(outClass);
+  setTimeout(() => {
+    list.classList.remove(outClass);
+    list.classList.add(inClass);
+    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+    el.classList.add('active');
+    activeFilter = el.dataset.filter;
+    renderList();
+    if (tg) tg.HapticFeedback?.selectionChanged?.();
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        list.classList.remove(inClass);
+      });
+    });
+  }, 180);
+}
+
+(function initSwipe() {
+  let startX = 0, startY = 0, locked = false;
+
+  const wrap = document.getElementById('screen-bookings');
+
+  wrap.addEventListener('touchstart', e => {
+    startX  = e.touches[0].clientX;
+    startY  = e.touches[0].clientY;
+    locked  = false;
+  }, { passive: true });
+
+  wrap.addEventListener('touchmove', e => {
+    if (locked) return;
+    const dx = e.touches[0].clientX - startX;
+    const dy = e.touches[0].clientY - startY;
+    if (Math.abs(dy) > Math.abs(dx)) { locked = true; }
+  }, { passive: true });
+
+  wrap.addEventListener('touchend', e => {
+    if (locked) return;
+    const dx = e.changedTouches[0].clientX - startX;
+    const dy = e.changedTouches[0].clientY - startY;
+    if (Math.abs(dx) < 40 || Math.abs(dy) > Math.abs(dx) * 1.2) return;
+    switchTabByDirection(dx < 0 ? 1 : -1);
+  }, { passive: true });
+})();
+
+// ================================================================
+// PULL-TO-REFRESH
+// ================================================================
+(function initPullToRefresh() {
+  const THRESHOLD = 64;
+  const ptr = document.getElementById('ptr-indicator');
+  let startY = 0, pulling = false, triggered = false;
+
+  document.addEventListener('touchstart', e => {
+    if (window.scrollY > 0) return;
+    startY   = e.touches[0].clientY;
+    pulling  = true;
+    triggered = false;
+  }, { passive: true });
+
+  document.addEventListener('touchmove', e => {
+    if (!pulling) return;
+    const dy = e.touches[0].clientY - startY;
+    if (dy <= 0) { ptr.style.height = '0'; return; }
+    const clamped = Math.min(dy * 0.5, THRESHOLD * 1.2);
+    ptr.style.height = clamped + 'px';
+    if (dy >= THRESHOLD * 1.5 && !triggered) {
+      triggered = true;
+      ptr.classList.add('ptr-ready');
+      if (tg) tg.HapticFeedback?.impactOccurred('light');
+    }
+  }, { passive: true });
+
+  document.addEventListener('touchend', () => {
+    if (!pulling) return;
+    pulling = false;
+    ptr.style.height = '0';
+    ptr.classList.remove('ptr-ready');
+    if (triggered) loadBookings(true);
+    triggered = false;
+  }, { passive: true });
+})();
 
 // ================================================================
 // ANALYTICS
@@ -854,7 +1091,7 @@ function renderAnalytics() {
   svcEl.innerHTML = sorted.map(([name, cnt]) => `
     <div class="service-row">
       <div class="service-row-top">
-        <span class="service-row-name">${name}</span>
+        <span class="service-row-name">${escHtml(name)}</span>
         <span class="service-row-cnt">${cnt}</span>
       </div>
       <div class="service-bar-bg">
@@ -907,24 +1144,13 @@ function openSupport() {
 // ================================================================
 // CALL SHEET
 // ================================================================
-let currentCallPhone = '';
-
 function openCall(name, phone) {
-  currentCallPhone = phone.replace(/[^+\d]/g, '');
+  const clean = phone.replace(/[^+\d]/g, '');
+  document.getElementById('call-link').href         = clean ? 'tel:' + clean : '#';
   document.getElementById('call-name').textContent  = name;
   document.getElementById('call-phone').textContent = phone;
   document.getElementById('call-backdrop').classList.add('show');
   if (tg) tg.HapticFeedback?.impactOccurred('light');
-}
-
-function doCall() {
-  if (!currentCallPhone) return;
-  // tg.openLink не поддерживает tel: — используем anchor click
-  const a = document.createElement('a');
-  a.href = 'tel:' + currentCallPhone;
-  document.body.appendChild(a);
-  a.click();
-  document.body.removeChild(a);
 }
 
 function closeCall(e) {
@@ -950,21 +1176,6 @@ function confirmAction(bookingId, newStatus, title, sub) {
 function closeConfirm() {
   document.getElementById('confirm-backdrop').classList.remove('show');
   pendingAction = null;
-}
-
-// ================================================================
-// UTILS
-// ================================================================
-function show(id) { document.getElementById(id).style.display = 'block'; }
-function hide(id) { document.getElementById(id).style.display = 'none'; }
-
-function showAuthError() {
-  hide('loader');
-  document.getElementById('auth-error').style.display = 'flex';
-}
-
-function formatDate(d) {
-  return d.toLocaleDateString('ru-RU', { weekday:'short', day:'numeric', month:'long' });
 }
 
 // ================================================================
