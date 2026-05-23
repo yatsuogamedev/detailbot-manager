@@ -95,6 +95,8 @@
     .stat {
       background: var(--bg2); border-radius: 8px;
       padding: 8px 10px; text-align: center;
+      cursor: pointer; -webkit-tap-highlight-color: transparent;
+      transition: box-shadow .15s;
     }
     .stat-num { font-size: 20px; font-weight: 600; line-height: 1; }
     .stat-lbl { font-size: 10px; color: var(--text3); margin-top: 3px; }
@@ -102,29 +104,9 @@
     .stat--amber .stat-num { color: var(--amber); }
     .stat--blue  .stat-num { color: var(--blue); }
     .stat--green .stat-num { color: var(--green); }
-
-    /* ── TABS (внутри экрана заявок) ── */
-    .tabs {
-      display: flex;
-      background: var(--bg);
-      border-bottom: 0.5px solid var(--border);
-      overflow-x: auto; scrollbar-width: none;
-    }
-    .tabs::-webkit-scrollbar { display: none; }
-    .tab {
-      flex: 1; min-width: 70px;
-      padding: 10px 6px; text-align: center;
-      font-size: 12px; color: var(--text3);
-      position: relative; cursor: pointer;
-      white-space: nowrap; user-select: none;
-      transition: color .2s;
-    }
-    .tab.active { color: var(--amber); }
-    .tab.active::after {
-      content: '';
-      position: absolute; bottom: 0; left: 15%; right: 15%;
-      height: 1.5px; background: var(--amber); border-radius: 2px;
-    }
+    .stat--amber.stat-active { box-shadow: 0 0 0 1.5px var(--amber); }
+    .stat--blue.stat-active  { box-shadow: 0 0 0 1.5px var(--blue); }
+    .stat--green.stat-active { box-shadow: 0 0 0 1.5px var(--green); }
 
     /* ── PULL-TO-REFRESH ── */
     #ptr-indicator {
@@ -435,17 +417,17 @@
       </div>
     </div>
     <div class="stats-row">
-      <div class="stat stat--amber">
+      <div class="stat stat--amber" onclick="filterByCard('wait')">
         <div class="stat-num" id="cnt-wait">0</div>
         <div class="stat-lbl">Ожидают</div>
         <div class="stat-sub">за сегодня</div>
       </div>
-      <div class="stat stat--blue">
+      <div class="stat stat--blue" onclick="filterByCard('work')">
         <div class="stat-num" id="cnt-work">0</div>
         <div class="stat-lbl">В работе</div>
         <div class="stat-sub">за сегодня</div>
       </div>
-      <div class="stat stat--green">
+      <div class="stat stat--green" onclick="filterByCard('done')">
         <div class="stat-num" id="cnt-done">0</div>
         <div class="stat-lbl">Готово</div>
         <div class="stat-sub">за сегодня</div>
@@ -455,12 +437,6 @@
 
   <!-- ЭКРАН 1 — ЗАЯВКИ -->
   <div id="screen-bookings">
-    <div class="tabs">
-      <div class="tab active" data-filter="all"  onclick="setTab(this)">Все</div>
-      <div class="tab" data-filter="wait"        onclick="setTab(this)">Ожидают</div>
-      <div class="tab" data-filter="work"        onclick="setTab(this)">В работе</div>
-      <div class="tab" data-filter="done"        onclick="setTab(this)">Готово</div>
-    </div>
     <div id="ptr-indicator"><div class="ptr-spinner"></div></div>
     <div id="list-wrap">
       <div class="list" id="list"></div>
@@ -572,7 +548,7 @@
     <div class="sheet-hint">Клиент DetailBot</div>
     <div class="sheet-name"  id="call-name">—</div>
     <div class="sheet-phone" id="call-phone">—</div>
-    <a class="sheet-call" id="call-link" href="#">Позвонить</a>
+    <a class="sheet-call" id="call-link" href="#" onclick="doCall(event)">Позвонить</a>
     <button class="sheet-cancel" onclick="document.getElementById('call-backdrop').classList.remove('show')">Отменить</button>
   </div>
 </div>
@@ -638,6 +614,13 @@ function showAuthError() {
 
 function formatDate(d) {
   return d.toLocaleDateString('ru-RU', { weekday:'short', day:'numeric', month:'long' });
+}
+
+function normalizeServiceName(s) {
+  return String(s || '')
+    .replace(/\s*\((седан|кроссовер|внедорожник|минивэн|хэтчбек|универсал|купе|пикап|легковой|suv|джип)\s*\)/gi, '')
+    .replace(/\s{2,}/g, ' ')
+    .trim() || '—';
 }
 
 function escHtml(s) {
@@ -823,7 +806,7 @@ const EMPTY_STATES = {
 
 function renderAll() {
   updateStats();
-  updateTabCounts();
+  updateStatActive();
   renderList();
 }
 
@@ -835,15 +818,18 @@ function updateStats() {
   document.getElementById('cnt-done').textContent = todayB.filter(b => b.status === 'served').length;
 }
 
-function updateTabCounts() {
-  const total = bookings.length;
-  const wait  = bookings.filter(b => b.status === 'created').length;
-  const work  = bookings.filter(b => b.status === 'confirmed').length;
-  const done  = bookings.filter(b => b.status === 'served' || b.status === 'rejected').length;
-  document.querySelector('[data-filter="all"]').textContent  = `Все (${total})`;
-  document.querySelector('[data-filter="wait"]').textContent = `Ожидают (${wait})`;
-  document.querySelector('[data-filter="work"]').textContent = `В работе (${work})`;
-  document.querySelector('[data-filter="done"]').textContent = `Готово (${done})`;
+function updateStatActive() {
+  document.querySelectorAll('.stat').forEach(s => s.classList.remove('stat-active'));
+  const map = { wait: '.stat--amber', work: '.stat--blue', done: '.stat--green' };
+  if (map[activeFilter]) document.querySelector(map[activeFilter])?.classList.add('stat-active');
+}
+
+function filterByCard(filter) {
+  const next = activeFilter === filter ? 'all' : filter;
+  activeFilter = next;
+  updateStatActive();
+  renderList();
+  if (tg) tg.HapticFeedback?.selectionChanged?.();
 }
 
 function renderList() {
@@ -926,30 +912,20 @@ function showSkeleton() {
 }
 
 // ================================================================
-// TABS (внутри экрана заявок)
 // ================================================================
-function setTab(el) {
-  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
-  el.classList.add('active');
-  activeFilter = el.dataset.filter;
-  renderList();
-}
-
-// ================================================================
-// SWIPE ON BOOKINGS TABS
+// SWIPE ON BOOKINGS LIST
 // ================================================================
 const TAB_ORDER = ['all', 'wait', 'work', 'done'];
 
 function switchTabByDirection(dir) {
-  const idx = TAB_ORDER.indexOf(activeFilter);
-  const next = idx + dir;
-  if (next < 0 || next >= TAB_ORDER.length) return;
+  const idx  = TAB_ORDER.indexOf(activeFilter);
+  const len  = TAB_ORDER.length;
+  const next = ((idx + dir) % len + len) % len;
   const newFilter = TAB_ORDER[next];
-  const tabEl = document.querySelector(`[data-filter="${newFilter}"]`);
-  if (tabEl) setTabAnimated(tabEl, dir);
+  if (newFilter !== activeFilter) setTabAnimated(newFilter, dir);
 }
 
-function setTabAnimated(el, dir) {
+function setTabAnimated(filter, dir) {
   const list = document.getElementById('list');
   const outClass = dir > 0 ? 'swipe-out-left' : 'swipe-out-right';
   const inClass  = dir > 0 ? 'swipe-in-left'  : 'swipe-in-right';
@@ -958,15 +934,12 @@ function setTabAnimated(el, dir) {
   setTimeout(() => {
     list.classList.remove(outClass);
     list.classList.add(inClass);
-    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
-    el.classList.add('active');
-    activeFilter = el.dataset.filter;
+    activeFilter = filter;
+    updateStatActive();
     renderList();
     if (tg) tg.HapticFeedback?.selectionChanged?.();
     requestAnimationFrame(() => {
-      requestAnimationFrame(() => {
-        list.classList.remove(inClass);
-      });
+      requestAnimationFrame(() => list.classList.remove(inClass));
     });
   }, 180);
 }
@@ -1044,12 +1017,10 @@ async function loadAnalytics() {
   analyticsLoading = true;
   try {
     const res = await apiFetch(API.analytics, { business_id: businessId });
-    if (res.ok) {
-      analyticsData = res;
-      if (activePeriod === 'day') renderAnalytics();
-    }
+    if (res.ok) analyticsData = res;
   } catch (_) {}
   analyticsLoading = false;
+  if (activePeriod === 'day') renderAnalytics();
 }
 
 function setPeriod(el) {
@@ -1115,8 +1086,8 @@ function renderAnalytics() {
   const svcData = filterByPeriod(bookings, activePeriod);
   const svcMap  = {};
   svcData.forEach(b => {
-    const svc = (b.service || '').trim();
-    if (svc) svcMap[svc] = (svcMap[svc] || 0) + 1;
+    const svc = normalizeServiceName(b.service);
+    if (svc && svc !== '—') svcMap[svc] = (svcMap[svc] || 0) + 1;
   });
   const sorted = Object.entries(svcMap).sort((a, b) => b[1] - a[1]).slice(0, 5);
   const maxVal = sorted.length ? sorted[0][1] : 1;
@@ -1184,11 +1155,17 @@ function openSupport() {
 // ================================================================
 function openCall(name, phone) {
   const clean = phone.replace(/[^+\d]/g, '');
-  document.getElementById('call-link').href         = clean ? 'tel:' + clean : '#';
-  document.getElementById('call-name').textContent  = name;
-  document.getElementById('call-phone').textContent = phone;
+  document.getElementById('call-link').dataset.phone = clean;
+  document.getElementById('call-name').textContent   = name;
+  document.getElementById('call-phone').textContent  = phone || 'Номер не указан';
   document.getElementById('call-backdrop').classList.add('show');
   if (tg) tg.HapticFeedback?.impactOccurred('light');
+}
+
+function doCall(e) {
+  e.preventDefault();
+  const phone = document.getElementById('call-link').dataset.phone;
+  if (phone) window.location.href = 'tel:' + phone;
 }
 
 function closeCall(e) {
